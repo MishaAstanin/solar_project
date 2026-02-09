@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block page_title %}
+    Построение
+{% endblock %}
+
+{% block page_css %}
+    
+    
+{% endblock %}
+
+{% block page %}
+
+<div>
+    
+    
+    <div class="page-flex">
+
+    
+        <div class="central_page">
+            <div><b>Временной интервал</b>: {{ t_start|date:'d.m.Y H:i:s' }} - {{ t_stop|date:'d.m.Y H:i:s' }}</div>
+        </div>
+    
+
+    </div>
+
+    <div>{{ left_form }}</div>
+    <div>{{ right_form }}</div>
+
+
+
+    <div class="">
+        {% for plot in plots %}
+
+        <div>
+
+		<div><b>Набор данных</b>: &ensp; <b>{{ plot.variable.dataset.tag }}</b> {{ plot.variable.dataset.logical_description }}</div>
+		<div><b>Переменная</b>: &ensp; <b>{{ plot.variable.name }}</b> {{ plot.variable.catdesc }}</div>
+		<div># invalid_values: {{ plot.invalid_values }}</div>
+		<div><b>Показаны только валидные</b>: {% if plot.validate %}Да{% else %}Нет{% endif %}</div> 
+		<div><b>Данные агрегированы</b>: {% if plot.aggregation %}Да{% else %}Нет{% endif %}</div>
+		{% if plot.bin_instance %}<div><b>Размер бина</b>: {{ plot.bin_instance.bin_td }} (HH:MM:SS) </div>{% endif %}
+        </div>
+        
+        {% with figure=plot.figure %}
+            {% if figure %}
+                {{ figure|safe }}
+            {% else %}
+                <div class="no_data">Нет данных за выбранный период</div>
+            {% endif %}
+        {% endwith %}
+
+        {% endfor %}
+    </div>
+
+
+
+</div>
+
+{% endblock %}
+
+{% block page_js %}
+
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block page_title %}
+     Upload
+{% endblock %}
+
+{% block page_css %}
+	<link rel="stylesheet" href="{% static 'info.css' %}">
+
+{% endblock %}
+
+{% block page %}
+
+<div class="page-title">
+	Загрузка {{ upload.u_tag }} набора данных <a href="{% url 'data' %}#dataset-{{ upload.dataset.id }}">{{ upload.dataset.tag }}</a>
+</div>
+
+<div>
+				<table>
+				<tr>
+					<th>u_tag</th>
+					<td>{{ upload.u_tag }}</td>
+				</tr>
+				<tr>
+					<th>dataset</th>
+					<td>{{ upload.dataset.tag }}</td>
+				</tr>
+				<tr>
+					<th>zip file</th>
+					<td>{{ upload.zip_path }}</td>
+				</tr>
+				<tr>
+					<th>match file</th>
+					<td>{{ upload.match_file_path }}</td>
+				</tr>
+				<tr>
+					<th>files (uploaded/found)</th>
+					<td>{{ upload.files_loaded}}/{{ upload.files_found }}</td>
+				</tr>
+				<tr>
+					<th>started</th>
+					<td>{{ upload.created }}</td>
+				</tr>
+
+				<tr>
+					<th colspan="2">Stages</th>
+				</tr>
+				<tbody class="left-align">
+				<tr>
+					<th>011 dataset created</th>
+					<td>{{ upload.dataset_created }}</td>
+				</tr>
+				<tr>
+					<th>012 data tree created</th>
+					<td>{{ upload.data_tree_created }}</td>
+				</tr>
+				<tr>
+					<th>013 dataset attributes created</th>
+					<td>{{ upload.dataset_attributes_created }}</td>
+				</tr>
+				<tr>
+					<th>013 variables created</th>
+					<td>{{ upload.variables_created }}</td>
+				</tr>
+				<tr>
+					<th>014 matchfile global applied</th>
+					<td>{{ upload.matchfile_global_applied }}</td>
+				</tr>
+				<tr>
+					<th>015 matchfile vars applied</th>
+					<td>{{ upload.matchfile_vars_applied }}</td>
+				</tr>
+				<tr>
+					<th>016 dynamic model created</th>
+					<td>{{ upload.dynamic_model_created }}</td>
+				</tr>
+				<tr>
+					<th>018 data model template created</th>
+					<td>
+						{{ upload.data_model_file_exists }}
+						{% if upload.data_model_file_exists %}
+							{% if upload.dataset.is_migrated %}{% else %}
+							<span class="warning">Migrations are not applied! Restart the server after.</span>
+							{% endif %}
+						{% endif %}
+					</td>
+				</tr>
+				</tbody>
+				</table>
+
+<div class="page-title">Log entries for this upload:</div>
+<table>
+	{% for entry in upload.ordered_logs %}
+	<tr>
+		<td>{{ entry.timestamp|date:"Y.m.d  H:i:s.u" }}</td>
+		<td>{% if entry.code %}<b class="{{ entry.code|lower }}">[{{ entry.code }}]</b>&ensp;&ensp;{% endif %}{{ entry.message }}</td>
+	</tr>
+	{% endfor %}
+</table>
+
+
+{% endblock %}
+
+{% block page_js %}
+
+<script src="{% static 'search.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,64 @@
+
+.mission {
+	padding: 0.2rem 0.5rem;
+	margin-bottom: 1rem;
+	font-weight: bold;
+}
+
+.dataset {
+	padding: 0.2rem 0.5rem;
+	border: 1px solid #ccc;
+	cursor: pointer;
+	margin-left: 2rem;
+	margin-bottom: 0.5rem;
+}
+
+.dataset-info {
+	margin-top: 1rem;
+	margin-bottom: 1rem;
+	margin-left: 2rem;
+
+}
+
+
+
+
+.simple-flex{
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.badge {
+	border-radius: 5px;
+	padding: 0.2rem 0.5rem;
+}
+
+.migrated-badge {
+	background-color: #90d6ff;
+}
+.not-migrated-badge {
+	background-color: #ccc;
+}
+
+.data-badge {
+	background-color: #90EE90;
+}
+
+.created {
+	color: green;
+}
+
+.exit,
+.start {
+	color: blue;
+}
+
+.error {
+	color: red;
+}
+
+.warning {
+	color: orange;
+}
+

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block page_title %}
+     Variable 
+{% endblock %}
+
+{% block page_css %}
+	<link rel="stylesheet" href="{% static 'info.css' %}">
+
+{% endblock %}
+
+{% block page %}
+
+<div class="page-title">
+	Переменная {{ variable.name }} набора данных <a href="{% url 'data' %}#dataset-{{ variable.dataset.id }}">{{ variable.dataset.tag }}</a>
+</div>
+
+<div>
+				<table>
+				<tr>
+					<th>name</th>
+					<td>{{ variable.name }}</td>
+				</tr>
+				<tr>
+					<th>description</th>
+					<td>{{ variable.catdesc }}</td>
+				</tr>
+				<tr>
+					<th>logic_type</th>
+					<td>{{ variable.var_logic_type }}</td>
+				</tr>
+				<tr>
+					<th>dimensions</th>
+					<td>{{ variable.dims }} {% if variable.dim_sizes %}[{{ variable.dim_sizes }}]{% endif %}</td>
+				</tr>
+				<tr>
+					<th>depends on</th>
+					<td>{{ variable.depend_0 }}</td>
+				</tr>
+				<tr>
+					<th>cdf_type</th>
+					<td>{{ variable.datatype }}</td>
+				</tr>
+				<tr>
+					<th>django_type</th>
+					<td>{{ variable.dynamic.first.data_type_instance.django_field }}</td>
+				</tr>
+				<tr>
+					<th>numpy_type</th>
+					<td>{{ variable.dynamic.first.data_type_instance.numpy_type }}</td>
+				</tr>
+				<tr>
+					<th>fields</th>
+					<td>{{ variable.get_list_of_fields }}</td>
+				</tr>
+				<tr>
+					<th colspan="2" >cdf attributes ({{ variable.attributes.count }})</th>
+				</tr>
+				{% for attribute in variable.ordered_attributes %}
+				<tr>
+					<th>{{ attribute.title }}</th>
+					<td>{{ attribute.value }}</td>
+				</tr>
+				{% endfor %}
+				</table>
+
+
+
+{% endblock %}
+
+{% block page_js %}
+
+<script src="{% static 'search.js' %}"></script>
+{% endblock %}

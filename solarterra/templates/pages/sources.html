@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block page_title %}
+    Поиск по наборам данных
+{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{% static 'form.css' %}">
+    <link rel="stylesheet" href="{% static 'search.css' %}">
+    
+{% endblock %}
+
+{% block page %}
+
+{{ form.media }}
+
+
+<div class="page-title">
+    1. Выбор переменных
+</div>
+
+
+<div>
+{% regroup datasets by mission as missions %}
+{% for mission in missions  %}
+<div class="mission"  onclick="changeVisibility('mission-list-{{ forloop.counter }}');">{{ mission.grouper }} ({{ mission.list|length }})</div>
+	<div id="mission-list-{{ forloop.counter }}" hidden>
+		{% for dataset in mission.list %}
+		<div class="dataset" onclick="changeVisibility('dataset-list-{{ dataset.id }}');">{{ dataset.logical_description }} [{{ dataset.tag }}]</div>
+		<div id="dataset-list-{{ dataset.id }}" hidden>
+
+			{% for var in  dataset.plottable_variables %}
+			<div class="variable" onclick="countVars('variable-choice', 'var-count');checkOnetoOne('{{var.id}}');">
+				<input id="poser-{{ var.id }}" type="checkbox"  class="variable-choice">
+				&nbsp;
+				<label for="poser-{{var.id}}">
+					<b>{{ var.name }}</b>
+					<span>{{ var.catdesc }}</span>
+				</label>
+			</div>
+			{% endfor %}
+		</div>
+		{% endfor %}
+	</div>
+{% endfor %}
+</div>
+
+
+<div>Выбрано: <span id="var-count">0</span></div>
+
+
+<div id="step-2" {% if fresh %} hidden {% endif %}>
+	<form id="form" method="post" action="{% url 'search' %}" target="_blank">
+	
+	{% csrf_token %}
+	<div hidden>{{ form.sources }}</div>
+	<div class="page-title">2. Выбор временного диапазона</div>
+
+	<div class="simple-flex">
+		<div>{{ form.ts_start.label }}</div>
+		<div>{{ form.ts_start }}</div>
+	</div>
+	<div>{{ form.errors.ts_start }}</div>
+	
+	<div class="simple-flex">
+		<div>{{ form.ts_end.label }}</div>
+		<div>{{ form.ts_end }}</div>
+	</div>
+	<div>{{ form.errors.ts_end }}</div>
+
+	<div>{{ form.validate }} <label for="id_validate"> {{ form.validate.label }}</label></div>
+	
+
+	<div>{{ form.non_field_errors }}</div>
+
+
+	<div><button class="btn" type="submit" >Поcтроить</button></div>
+	
+	</form>
+</div>
+
+
+
+
+{% endblock %}
+
+
+{% block page_js %}
+
+<script src="{% static 'htmx.min.js' %}"></script>
+
+<script src="{% static 'search.js' %}"></script>
+
+<script>
+    // $('.dateandtime').dateAndTime();
+</script>
+
+{% endblock %}

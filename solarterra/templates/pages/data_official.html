@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block page_title %}
+    Загруженные данные
+{% endblock %}
+
+{% block page_css %}
+	<link rel="stylesheet" href="{% static 'info.css' %}">
+
+{% endblock %}
+
+{% block page %}
+
+<div class="page-title">
+    Загруженные данные
+</div>
+
+<div>
+	{% regroup datasets by mission as missions %}
+	{% for mission in missions  %}
+		<div class="mission">{{ mission.grouper }} ({{ mission.list|length }})</div>
+		<div id="mission-list-{{ forloop.counter }}">
+		{% for dataset in mission.list %}
+		<div id="dataset-{{ dataset.id }}" class="dataset simple-flex" onclick="changeVisibility('ds-info-{{ dataset.id }}');"> 
+			<div>{{ dataset.logical_description }}</div>
+			{% if dataset.is_migrated %}
+				<div class="badge migrated-badge">migrated</div>
+			{% else %}
+				<div class="badge not-migrated-badge">not migrated</div>
+			{% endif %}
+			{% if dataset.has_data %} <div class="badge data-badge">data saved</div> {% endif %}
+		</div>
+			<div class="dataset-info" id="ds-info-{{ dataset.id }}" hidden>
+				<table>
+				<tr>
+					<th>Tag</th>
+					<td>{{ dataset.tag }}</td>
+				</tr>
+				<tr>
+					<th>Source name</th>
+					<td>{{ dataset.source_name }}</td>
+				</tr>
+				<tr>
+					<th>Data_type</th>
+					<td>{{ dataset.data_type }}</td>
+				</tr>
+				<tr>
+					<th>Instrument</th>
+					<td>{{ dataset.instrument }}</td>
+				</tr>
+				<tr>
+					<th>Text description</th>
+					<td>{{ dataset.text_description }}</td>
+				</tr>
+				<tr>
+					<th>PI</th>
+					<td>{{ dataset.pi_name }}, {{ dataset.pi_affiliation }}</td>
+				</tr>
+				<tr>
+					<th>File Directory</th>
+					<td>{{ dataset.directory }} &nbsp;<b>({{ dataset.files_found }} files)</b></td>
+				</tr>
+				<tr>
+					<th>Uploads ({{ dataset.uploads.count }})</th>
+					<td>
+						{% for upload in dataset.uploads.all %}
+						<a href="{% url 'upload' upload.id  %}">{{ upload.u_tag }}</a>
+						{% endfor %}
+					</td>
+				</tr>
+				<tr onclick="changeVisibility('tbody-dataset-{{ dataset.id }}');" style="cursor: pointer;">
+					<th colspan="2">Variables ({{ dataset.variables.count }})</th>
+				</tr>
+				<tbody id="tbody-dataset-{{ dataset.id }}" hidden>
+				<tr>
+					<th>data&nbsp;({{ dataset.data_variables.count }})</th>
+					<td>{% for var in dataset.data_variables %}
+						<div>{% if var.is_displayed %}[is_displayed] {% endif %}<a href="{% url 'variable' var.id %}"><b>{{ var.name }}</b> {{ var.catdesc }}</a></div> 
+					{% endfor %}</td>
+				</tr>
+				<tr>
+					<th>support_data&nbsp;({{ dataset.support_variables.count }})</th>
+					<td>{% for var in dataset.support_variables %}
+						<div>{% if var.is_displayed %}[is_displayed] {% endif %}<a href="{% url 'variable' var.id %}"><b>{{ var.name }}</b> {{ var.catdesc }}</a></div>
+					{% endfor %}</td>
+				</tr>
+				<tr>
+					<th>meta_data&nbsp;({{ dataset.meta_variables.count }})</th>
+					<td>{% for var in dataset.meta_variables %} 
+						<div>{% if var.is_displayed %}[is_displayed] {% endif %}<a href="{% url 'variable' var.id %}"><b>{{ var.name }}</b> {{ var.catdesc }}</a></div>
+					{% endfor %}</td>
+				</tr>
+				</tbody>
+				</table>
+
+			</div>
+		{% endfor %}
+		</div>
+	{% endfor %}
+
+</div>
+
+{% endblock %}
+
+{% block page_js %}
+
+<script src="{% static 'search.js' %}"></script>
+{% endblock %}

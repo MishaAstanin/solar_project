@@ -1,0 +1,28 @@
+
+.mission {
+	padding: 0.2rem 0.5rem;
+	border: 1px solid #ccc;
+	cursor: pointer;
+	margin-bottom: 0.5rem;
+	font-weight: bold;
+}
+
+.dataset {
+	padding: 0.2rem 0.5rem;
+	border: 1px solid #ccc;
+	cursor: pointer;
+	margin-left: 2rem;
+	margin-bottom: 0.5rem;
+}
+
+.variable {
+	margin-left: 4rem;
+	margin-bottom: 0.5rem;
+}
+
+.simple-flex{
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
