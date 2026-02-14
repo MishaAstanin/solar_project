@@ -49,7 +49,7 @@ class Command(UploadRequired, BaseCommand):
         for variable in variables:
             # parsing variables that contain a single array
             var_name = safe_str(variable.name)
-            #print(f"var '{var_name}', dims {variable.dims}, dim_sizes {variable.dim_sizes}, labels {variable.lablaxis}")
+            print(f"var '{var_name}', dims {variable.dims}, dim_sizes {variable.dim_sizes}, labels {variable.lablaxis}")
 
             if variable.dims == 0:
                 dmi.df_list.append(DynamicField(

@@ -11,6 +11,21 @@ def get_var_field(mf_str):
     else:
         raise Exception(f"Matchfile atribute '{mf_str}' does not have standard prefix.")
 
+def resolve_db_field_name(var_field_base, v_attr_name):
+    '''
+    Defines the final name of the field in the database
+    
+    '''
+    if v_attr_name is None:
+        return var_field_base
+
+    v_attr_lower = v_attr_name.lower()
+
+    if v_attr_lower != var_field_base and v_attr_lower.startswith(var_field_base + '_'):
+        return v_attr_lower
+
+    return var_field_base
+
 class Command(UploadRequired, BaseCommand):
 
     help = "#5 step in evaluation stage of the dataset upload.\n\
@@ -43,23 +58,40 @@ class Command(UploadRequired, BaseCommand):
                 
                 # parse out Variable field name
                 try:
-                    var_field = get_var_field(json_var_attr)
+                    var_field_base = get_var_field(json_var_attr)
                 except Exception as e:
                     make_log_entry(f"When parsing matchfile variable '{var_name}: {e}'", "ERROR", upload=upload)
-
-                # set attribute value
-                setattr(var_instance, var_field, var_attr_dict['value'])
-
-                # find the var attr instance
-                v_attr_name = var_attr_dict['vattribute_name']
-                if v_attr_name is None:
                     continue
-                try:
-                    # case-insensitive query
-                    var_attr_instance = var_instance.attributes.get(title__iexact=v_attr_name)
-                    var_attr_instance.update(linked_standard_field=var_field)
-                except Exception as e:
-                    make_log_entry(f"VariableAttribute '{v_attr_name}' for Variable '{var_name}' from match file does not exist in the CDF file.", "WARNING", upload=upload)
+
+                v_attr_names = var_attr_dict['vattribute_name']
+                values = var_attr_dict['value']
+
+                # to lists for uniform processing
+                if not isinstance(v_attr_names, list):
+                    v_attr_names = [v_attr_names]
+                    values = [values]
+
+                if len(v_attr_names) != len(values):
+                    make_log_entry(f"Length mismatch between vattribute_name ({len(v_attr_names)}) and value ({len(values)})", "ERROR", upload=upload)
+                    continue
+
+                for v_attr_name, value in zip(v_attr_names, values):
+                    var_field = resolve_db_field_name(var_field_base, v_attr_name)
+                    
+                    # set attribute value
+                    try:
+                        setattr(var_instance, var_field, value)
+                    except AttributeError:
+                        make_log_entry(f"Field {var_field} not found in model", "WARNING")
+                
+                    if v_attr_name is None:
+                        continue
+                    try:
+                        # case-insensitive query
+                        var_attr_instance = var_instance.attributes.get(title__iexact=v_attr_name)
+                        var_attr_instance.update(linked_standard_field=var_field)
+                    except Exception as e:
+                        make_log_entry(f"VariableAttribute '{v_attr_name}' for Variable '{var_name}' from match file does not exist in the CDF file.", "WARNING", upload=upload)
 
             try:
                 var_instance.save()

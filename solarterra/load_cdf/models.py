@@ -289,6 +289,7 @@ class Variable(models.Model):
     catdesc = models.CharField(max_length=200, blank=True, null=True)
     var_notes = models.TextField(blank=True, null=True)
     depend_0 = models.CharField(max_length=200, blank=True, null=True)
+    depend_1 = models.CharField(max_length=200, blank=True, null=True)
     display_type = models.CharField(max_length=200, blank=True, null=True)
     scaletyp = models.CharField(max_length=200, blank=True, null=True)
     # data, meta_data or support_data 
