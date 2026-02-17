@@ -426,6 +426,10 @@ class DynamicField(models.Model):
 
     multipart_index = models.PositiveSmallIntegerField(blank=True, null=True)
 
+    # field stores values in ArrayField?
+    is_array_field = models.BooleanField(default=False, blank=True)
+    array_size = models.PositiveIntegerField(null=True, blank=True)
+
     # actual variable instance it represents
     variable_instance = models.ForeignKey("Variable", on_delete=models.CASCADE, related_name="dynamic")
     

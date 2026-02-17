@@ -53,8 +53,9 @@ class Command(UploadRequired, BaseCommand):
 
             if variable.dims == 0:
                 dmi.df_list.append(DynamicField(
-                    field_name=safe_str(variable.name),
+                    field_name=var_name,
                     multipart=False,
+                    is_array_field=False,
                     variable_instance=variable,
                     dynamic_model=dmi
                 ))
@@ -63,19 +64,32 @@ class Command(UploadRequired, BaseCommand):
                 if variable.dim_sizes is None:
                     make_log_entry(f"Variable '{variable.name}' with dims = {variable.dims} does not have dim_sizes set", "ERROR", upload=upload)
                     upload.terminate()
-                for index in range(variable.dim_sizes):
-                    # taking parts of separate field names from the lablaxis property
-                    field_name = variable.name + '_' + variable.lablaxis[index].strip()
-                    safe_field_name = safe_str(field_name)
-                    #print(f"\t'{field_name}'  normal field_name '{safe_field_name}'")
+                
+                if variable.dim_sizes <= 3 and variable.lablaxis is not None:
+                    for index in range(variable.dim_sizes):
+                        # taking parts of separate field names from the lablaxis property
+                        field_name = variable.name + '_' + variable.lablaxis[index].strip()
+                        safe_field_name = safe_str(field_name)
+                        dmi.df_list.append(DynamicField(
+                            field_name=safe_field_name,
+                            multipart=True,
+                            multipart_index=index + 1,
+                            is_array_field=False,
+                            variable_instance=variable,
+                            dynamic_model=dmi
+                        ))
+                        make_log_entry(f"Added dynamic field '{safe_field_name}' for variable '{variable.name}'", upload=upload)
+                else:
                     dmi.df_list.append(DynamicField(
-                        field_name=safe_field_name,
-                        multipart=True,
-                        multipart_index=index + 1,
+                        field_name=var_name,
+                        multipart=False,
+                        is_array_field=True,
+                        array_size=variable.dim_sizes,
                         variable_instance=variable,
                         dynamic_model=dmi
                     ))
-                    make_log_entry(f"Added dynamic field '{safe_field_name}' for variable '{variable.name}'", upload=upload)
+                    make_log_entry(
+                        f"Added ARRAY dynamic field '{var_name}' (size={variable.dim_sizes}) for variable '{variable.name}'", upload=upload)
             else:
                 make_log_entry(f"Number of dimensions '{variable.dims}' in '{variable.name}' is not supported yet, skipping field creation", "WARNING", upload=upload)
                 continue
