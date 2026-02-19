@@ -395,6 +395,17 @@ class DynamicModel(models.Model):
         super(DynamicModel, self).__init__(*args, **kwargs)
         # dynamic_field_list
         self.df_list = []
+    
+    def sorted_fields(self):
+        fields = list(self.fields.all())
+        
+        def sort_key(f):
+            name = f.field_name
+            if 'epoch' in name or 'time' in name:
+                return (0, f.field_name)
+            return (1, f.field_name)
+        
+        return sorted(fields, key=sort_key)
 
 
     def __str__(self):

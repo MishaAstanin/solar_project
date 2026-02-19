@@ -17,19 +17,23 @@ from itertools import zip_longest
 def save_single_file(cdf_file, fields, model_class, upload):
 
     cdf_obj = pycdf.CDF(cdf_file.full_path)
-    #print(cdf_file.full_path)
     arr_collection = []
     field_labels = []
     
     # numpy array work only
     for field in fields:
         var = field.variable_instance
-        #print(var.name, field.field_name)
-        if not field.multipart:
+        
+        if field.is_array_field:
+            # for ArrayField take the 2D matrix without cutting along the axes
             arr = cdf_obj[var.name][...]
-        else:
-            #print(f"multipart: dims {var.dims}, dim_sizes {var.dim_sizes}, dim index {field.multipart_index - 1}")
+            # for NRV
+            if arr.ndim == 1:
+                arr = arr.reshape(1, -1)
+        elif field.multipart:
             arr = cdf_obj[var.name][:, field.multipart_index - 1]
+        else:
+            arr = cdf_obj[var.name][...]
         
         if len(arr) == 0:
             make_log_entry(f"file '{cdf_file.full_path}' field '{field.field_name}' variable '{var.name}' contains no data", "WARNING", upload=upload)
@@ -59,7 +63,7 @@ def save_single_file(cdf_file, fields, model_class, upload):
         # variable fillvals can differ from standard ones for the type: 017 command checks that
         # also fillval can change on the file level: #TODO add cdf file FILL_VAL and PAD_VALUE parsing here
         if var.fillval is not None:
-            fill_value = DataType.proper_type(var.fillval, arr[0])
+            fill_value = DataType.proper_type(var.fillval, arr.flat[0])
             #print(f"FILL {fill_value}: {len(arr[arr==fill_value])} / {arr.shape}")
             #print("added fillval condition", var.fillval, type(arr[0]), fill_value, type(fill_value))
             if fill_value is None:
@@ -77,13 +81,16 @@ def save_single_file(cdf_file, fields, model_class, upload):
             arr[condition] = swap_value
         
         if 'float' in str(arr.dtype):
-            nan_count = np.isnan(arr).sum(0)
+            nan_count = int(np.isnan(arr).sum())
             if nan_count > 0:
                 make_log_entry(f"{nan_count} invalid values in '{field.field_name}' file '{cdf_file.full_path}'")
         
         # epoch parsing
         if field.data_type_instance.is_epoch():
             arr_collection.append(map(tbr, arr))
+        # for ArrayField
+        elif field.is_array_field:
+            arr_collection.append([row.tolist() for row in arr])
         else:
             arr_collection.append(arr)
 

@@ -6,7 +6,7 @@ from load_cdf.models import CDFFileStored, Float32Field
 
 class {{ dm_instance.model_name }}(models.Model):
 
-	{% for field in dm_instance.fields.all %}{% with datatype=field.data_type_instance%}{% if field.is_array_field %}
+	{% for field in dm_instance.sorted_fields %}{% with datatype=field.data_type_instance%}{% if field.is_array_field %}
 	{{ field.field_name }} = ArrayField({{ datatype.django_field }}(null=True), size={{ field.array_size }}, blank=True, null=True)
 	{% else %}
 	{{ field.field_name }} = {{ datatype.django_field }}(blank=True, null=True)
