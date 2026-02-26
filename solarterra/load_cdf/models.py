@@ -187,7 +187,7 @@ class Dataset(models.Model):
         self.save()
     
     def plottable_variables(self):
-        return self.variables.filter(var_logic_type="data", display_type="time_series").order_by('depend_0', 'name')
+        return self.variables.filter(var_logic_type="data", display_type__in=["time_series", "spectrogram"]).order_by('depend_0', 'name')
     
     def is_migrated(self):
         return self.dynamic.resolve_class() is not None
@@ -255,7 +255,7 @@ class VariableManager(GetManager):
     # same condition as in Dataset.plottable_variables(), make dataset relation manager on variable the same as this one
     def plottable(self):
         datasets = Dataset.objects.have_data()
-        return self.filter(dataset__in=datasets, var_logic_type="data", display_type="time_series").order_by('dataset__tag', 'name')
+        return self.filter(dataset__in=datasets, var_logic_type="data", display_type__in=["time_series", "spectrogram"]).order_by('dataset__tag', 'name')
 
     def form_choices(self):
         return [(var.id, var.name) for var in self.plottable()]

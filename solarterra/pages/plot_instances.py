@@ -5,7 +5,7 @@ from solarterra.utils import str_to_dt
 
 import math
 import datetime as dt
-from pages.figures import scatter, n_trace
+from pages.figures import scatter, n_trace, spectrogram
 
 
 class DBQuery():
@@ -300,3 +300,179 @@ class Plot():
         else:
             self.figure = n_trace(self)
 
+
+class SpectrogramPlot():
+
+    def __init__(self, t_start, t_stop, variable, validate):
+        self.t_start = t_start
+        self.t_stop = t_stop
+        self.variable = variable
+        self.validate = validate
+
+        self.x_axis = None
+
+        self.y_axis = None
+        self.y_axis_label = None
+        self.y_scaletyp = None
+
+        # z_matrix[i][j] value at time i for energy j
+        self.z_matrix = None
+
+        self.aggregation = False
+        self.invalid_values = []
+        self.figure = None
+
+        self.bin_instance = None
+    
+    def load_data(self):
+        dataset = self.variable.dataset
+        data_class = dataset.dynamic.resolve_class()
+
+        if data_class is None:
+            return
+
+        # time field from depend_0
+        if not self.variable.depend_0:
+            return
+
+        try:
+            depend_0_var = dataset.variables.get(name=self.variable.depend_0)
+            filter_field = depend_0_var.dynamic.first().field_name
+        except Exception:
+            return
+
+        # spectrogram data field
+        data_field = self.variable.dynamic.filter(is_array_field=True).first()
+        if data_field is None:
+            return
+
+        i_start = ti(self.t_start)
+        i_stop = ti(self.t_stop)
+
+        qs = data_class.objects.filter(**{
+            f'{filter_field}__gte': i_start,
+            f'{filter_field}__lte': i_stop,
+            f'{data_field.field_name}__isnull': False,
+        }).order_by(filter_field).values_list(filter_field, data_field.field_name)
+
+        times = []
+        values = []
+        for t_val, arr_val in qs.iterator():
+            times.append(t_val)
+            values.append(arr_val)
+
+        if not times:
+            return
+
+        time_array = np.array(times)              # (N,)
+        z_matrix = np.array(values, dtype=float)  # (N, M)
+
+        self._apply_validation(z_matrix)
+
+        if len(time_array) > Bin.PPP:
+            self.bin_instance = Bin(self.t_start, self.t_stop)
+            time_array, z_matrix = self._aggregate(time_array, z_matrix)
+            self.aggregation = True
+
+        self.x_axis = np.array(list(map(it, time_array)))
+        self.z_matrix = z_matrix
+
+        # energies from depend_1
+        if self.variable.depend_1:
+            self._load_energy_axis(dataset, data_class)
+        else:
+            self.y_axis = np.arange(z_matrix.shape[1], dtype=float)
+            self.y_scaletyp = None
+    
+    def _load_energy_axis(self, dataset, data_class):
+        try:
+            energy_var = dataset.variables.get(name=self.variable.depend_1)
+            energy_field = energy_var.dynamic.filter(is_array_field=True).first()
+
+            if energy_field is None:
+                raise ValueError("Energy variable has no ArrayField")
+
+            energy_values = data_class.objects.filter(
+                **{f'{energy_field.field_name}__isnull': False}
+            ).values_list(energy_field.field_name, flat=True).first()
+
+            if energy_values:
+                self.y_axis = np.array(energy_values, dtype=float)
+                try:
+                    label = energy_var.get_axis_label()
+                    self.y_axis_label = label if label else energy_var.name
+                except Exception:
+                    self.y_axis_label = energy_var.name
+                self.y_scaletyp = getattr(energy_var, 'scaletyp', None)
+            else:
+                raise ValueError("No energy data found")
+
+        except Exception:
+            if self.z_matrix is not None:
+                self.y_axis = np.arange(self.z_matrix.shape[1], dtype=float)
+            else:
+                self.y_axis = np.array([0])
+            self.y_scaletyp = None
+
+    def _apply_validation(self, z_matrix):
+        if not self.validate or z_matrix is None or z_matrix.size == 0:
+            return
+
+        sample = z_matrix.flat[0]
+        n_channels = z_matrix.shape[1]
+
+        if self.variable.validmin is not None:
+            vmin = self.variable.validmin
+            if isinstance(vmin, list):
+                vmin_arr = np.array([
+                    float(DataType.proper_type(v, sample) or -np.inf)
+                    for v in vmin[:n_channels]
+                ], dtype=float)
+                z_matrix[z_matrix < vmin_arr] = np.nan
+            else:
+                vmin_val = DataType.proper_type(vmin, sample)
+                if vmin_val is not None:
+                    z_matrix[z_matrix < float(vmin_val)] = np.nan
+
+        if self.variable.validmax is not None:
+            vmax = self.variable.validmax
+            if isinstance(vmax, list):
+                vmax_arr = np.array([
+                    float(DataType.proper_type(v, sample) or np.inf)
+                    for v in vmax[:n_channels]
+                ], dtype=float)
+                z_matrix[z_matrix > vmax_arr] = np.nan
+            else:
+                vmax_val = DataType.proper_type(vmax, sample)
+                if vmax_val is not None:
+                    z_matrix[z_matrix > float(vmax_val)] = np.nan
+
+        total = z_matrix.size
+        nan_count = int(np.isnan(z_matrix).sum())
+        self.invalid_values.append(f"{nan_count} / {total} invalid/missing")
+
+    def _aggregate(self, time_array, z_matrix):
+        n = len(time_array)
+        bin_size = max(1, n // Bin.PPP)
+
+        starts = np.arange(0, n, bin_size)
+        
+        counts = np.diff(np.append(starts, n)).astype(float)
+
+        time_sums = np.add.reduceat(time_array.astype(float), starts)
+        agg_times = (time_sums / counts).astype(time_array.dtype)
+
+        z_nan_mask = np.isnan(z_matrix)
+        z_filled = np.where(z_nan_mask, 0.0, z_matrix)
+        z_valid_count = (~z_nan_mask).astype(float)
+
+        z_sums = np.add.reduceat(z_filled, starts, axis=0)
+        z_counts = np.add.reduceat(z_valid_count, starts, axis=0)
+
+        z_counts[z_counts == 0] = np.nan
+        agg_z = z_sums / z_counts
+
+        return agg_times, agg_z
+
+    def get_figure(self):
+        self.figure = spectrogram(self)

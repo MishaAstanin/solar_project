@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 import math
-from pages.plot_instances import Bin, DBQuery, Plot
+from pages.plot_instances import Bin, DBQuery, Plot, SpectrogramPlot
 from load_cdf.models import DynamicField
 
 
@@ -18,10 +18,13 @@ def get_plots(variables, t_start, t_end, validate):
     bin_instance = Bin(t_start, t_end)
     plots = []
 
-    for item in variables.order_by('dataset__tag').distinct('dataset__tag', 'depend_0'):
+    ts_variables = variables.filter(display_type="time_series")
+    spec_variables = variables.filter(display_type="spectrogram")
+
+    for item in ts_variables.order_by('dataset__tag').distinct('dataset__tag', 'depend_0'):
 
         #print(item.dataset, item.depend_0)
-        vars_in_query = variables.filter(dataset=item.dataset, depend_0=item.depend_0).order_by('name')
+        vars_in_query = ts_variables.filter(dataset=item.dataset, depend_0=item.depend_0).order_by('name')
 
         if item.depend_0 is None:
             print(f"No dependent axis specified for dataset '{item.dataset}', vars '{vars_in_query}'! Skipping")
@@ -29,7 +32,7 @@ def get_plots(variables, t_start, t_end, validate):
         
         filter_field = item.get_depend_field().field_name
         fields = list(DynamicField.objects.filter(variable_instance__in=vars_in_query).values_list('field_name', flat=True))
-    
+
         query = DBQuery(
                 dataset=item.dataset,
                 filter_field=filter_field,
@@ -70,5 +73,18 @@ def get_plots(variables, t_start, t_end, validate):
             plot.get_figure()
             #print(plot.variable.name, plot.bin_size)
             plots.append(plot)
+    
+    for var in spec_variables:
+        spec_plot = SpectrogramPlot(
+            t_start=t_start,
+            t_stop=t_end,
+            variable=var,
+            validate=validate
+        )
+        spec_plot.load_data()
+        spec_plot.get_figure()
+        plots.append(spec_plot)
         
+    plots.sort(key=lambda p: p.variable.name.lower())
+
     return plots
