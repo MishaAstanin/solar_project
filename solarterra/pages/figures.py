@@ -2,6 +2,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 
+XAXIS_DOMAIN = [0.0, 0.85]
 
 def scatter(plot):
 
@@ -19,6 +20,7 @@ def scatter(plot):
     fig.update_layout(
         xaxis_range=[plot.t_start, plot.t_stop],
         yaxis_title=plot.variable.get_axis_label(),
+        xaxis_domain=XAXIS_DOMAIN,
     )
 
 
@@ -53,6 +55,7 @@ def n_trace(plot):
         )
         fig['layout'][f"yaxis{index+1}"]['title'] = plot.variable.get_axis_label(index)
         fig['layout'][f"xaxis{index+1}"]['range'] = [plot.t_start, plot.t_stop]
+        fig['layout'][f"xaxis{index+1}"]['domain'] = XAXIS_DOMAIN
 
     fig.update_traces(marker=dict(size=4))
     
@@ -103,7 +106,18 @@ def spectrogram(plot):
         y=plot.y_axis,
         z=z_data,
         colorscale='Jet',
-        colorbar=dict(title=colorbar_title),
+        colorbar=dict(
+            title=dict(
+                text=colorbar_title,
+                side='right',
+            ),
+            x=0.90,
+            xpad=5,
+            thicknessmode="pixels",
+            thickness=15,
+            lenmode="fraction",
+            len=1.0,
+        ),
         hoverongaps=False,
     ))
 
@@ -111,6 +125,7 @@ def spectrogram(plot):
         xaxis_title='Time',
         yaxis_title=plot.y_axis_label,
         xaxis_range=[plot.t_start, plot.t_stop],
+        xaxis_domain=XAXIS_DOMAIN,
         height=500,
     )
 

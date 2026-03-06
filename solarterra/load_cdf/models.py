@@ -334,7 +334,10 @@ class Variable(models.Model):
         return self.attributes.order_by('title')
 
     def get_axis_label(self, index=None):
-        label = self.lablaxis[index] if index is not None else self.lablaxis
+        if not hasattr(self, 'lablaxis') or self.lablaxis is None:
+            label = ""
+        else:
+            label = self.lablaxis[index] if index is not None else self.lablaxis
         if self.units is not None:
             if index is not None and not isinstance(self.units, str):
                 label += f", {self.units[index]}"    
