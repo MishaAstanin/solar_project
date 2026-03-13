@@ -14,7 +14,7 @@
 
 {% block page %}
 
-{{ form.media }}
+{{ source_form.media }}
 
 
 <div class="page-title">
@@ -57,32 +57,42 @@
 
 
 <div id="step-2" {% if fresh %} hidden {% endif %}>
-	<form id="form" method="post" action="{% url 'search' %}" target="_blank">
-	
+	<form id="form" method="post">
+
 	{% csrf_token %}
-	<div hidden>{{ form.sources }}</div>
+	<div hidden>{{ source_form.sources }}</div>
 	<div class="page-title">2. Выбор временного диапазона</div>
 
 	<div class="simple-flex">
-		<div>{{ form.ts_start.label }}</div>
-		<div>{{ form.ts_start }}</div>
+		<div>{{ source_form.ts_start.label }}</div>
+		<div>{{ source_form.ts_start }}</div>
 	</div>
-	<div>{{ form.errors.ts_start }}</div>
-	
+	<div>{{ source_form.errors.ts_start }}</div>
+
 	<div class="simple-flex">
-		<div>{{ form.ts_end.label }}</div>
-		<div>{{ form.ts_end }}</div>
+		<div>{{ source_form.ts_end.label }}</div>
+		<div>{{ source_form.ts_end }}</div>
 	</div>
-	<div>{{ form.errors.ts_end }}</div>
+	<div>{{ source_form.errors.ts_end }}</div>
 
-	<div>{{ form.validate }} <label for="id_validate"> {{ form.validate.label }}</label></div>
-	
-
-	<div>{{ form.non_field_errors }}</div>
+	<div>{{ source_form.validate }} <label for="id_validate"> {{ source_form.validate.label }}</label></div>
 
 
-	<div><button class="btn" type="submit" >Поcтроить</button></div>
-	
+	<div>
+		{{ source_form.non_field_errors }}
+		{{ plot_form.non_field_errors }}
+		{{ export_form.non_field_errors }}
+	</div>
+
+
+	{#TODO: clean up style here #}
+	<div class="page-title">3. Параметры построения и экспорта</div>
+
+	<div>
+		<button class="btn" type="submit" formaction="{% url 'plot' %}" formtarget="_blank">Поcтроить</button>
+		<button class="btn" type="submit" formaction="{% url 'export' %}" formtarget="_blank">Экспортировать данные</button>
+	</div>
+
 	</form>
 </div>
 

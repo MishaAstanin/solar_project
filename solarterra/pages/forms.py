@@ -69,7 +69,7 @@ class SourceForm(forms.Form):
         },
         widget=DateTimeWidget(attrs={'id': "dtw_end"})
     )
-
+    
     validate = forms.BooleanField(
         label="Валидировать данные",
         required=False
@@ -83,5 +83,13 @@ class SourceForm(forms.Form):
         if ts_start is not None and ts_end is not None:
             if ts_start >= ts_end:
                 raise ValidationError("Start time should be before end time.")
-
         return cleaned_data
+        
+class PlotForm(forms.Form):
+    ''' A stub for placing plot parameters later '''
+    pass
+
+
+class ExportForm(forms.Form):
+    ''' A stub for placing export parameters later '''
+    pass
