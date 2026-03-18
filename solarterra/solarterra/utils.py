@@ -10,6 +10,8 @@ def make_aware(ts):
 
 # translates datetime instance into bigint
 def ts_bigint_resolver(ts):
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=UTC)
     return int(ts.timestamp())
     
 # translates number into the datetime instance
