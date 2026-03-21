@@ -85,6 +85,10 @@ def get_plots(variables, t_start, t_end, validate):
         spec_plot.get_figure()
         plots.append(spec_plot)
         
-    plots.sort(key=lambda p: p.variable.name.lower())
+    plots.sort(key=lambda p: (
+        p.variable.dataset.tag.lower(),
+        p.variable.depend_0 or '',
+        p.variable.name.lower()
+    ))
 
     return plots
