@@ -1,7 +1,4 @@
 from django.core.management.base import BaseCommand
-import os
-import datetime as dt
-from django.conf import settings
 from spacepy import pycdf
 from load_cdf.models import *
 from load_cdf.utils import *
@@ -189,9 +186,3 @@ class Command(UploadRequired, BaseCommand):
                 make_log_entry(f"{current_percent}% done, {index + 1} files uploaded, total time {round(sum(deltas), 5)}, avg time per file {round(sum(deltas) / len(deltas), 5)}", upload=upload)
                 print(f"{current_percent}% done, {index + 1} files uploaded, total time {round(sum(deltas), 5)}, avg time per file {round(sum(deltas) / len(deltas), 5)}")
                 percent = current_percent
-
-
-
-
-
-    

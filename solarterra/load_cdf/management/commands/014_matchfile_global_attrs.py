@@ -55,4 +55,3 @@ class Command(UploadRequired, BaseCommand):
             make_log_entry(f"When updating Dataset instance {dataset.tag} with global attributes from match file: {str(e)}", "ERROR", upload=upload)
         else:
             make_log_entry(f"Dataset instance {dataset.tag} updated with global attributes from match file", "SUCCESS", upload=upload)
-

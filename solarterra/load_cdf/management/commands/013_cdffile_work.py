@@ -82,4 +82,3 @@ class Command(UploadRequired, BaseCommand):
         del upload.da_list
         del upload.var_list
         del upload.var_attr_list
-

@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
 from load_cdf.models import *
-# from load_cdf.utils import *
 from .evaluate_extras import command_logger, UploadRequired
 
 

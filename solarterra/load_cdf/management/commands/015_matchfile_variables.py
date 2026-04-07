@@ -100,5 +100,3 @@ class Command(UploadRequired, BaseCommand):
             except Exception as e:
                 make_log_entry(f"On updating Variable instance '{var_name}' : {e}", "ERROR", upload=upload)
                 upload.terminate()
-
-

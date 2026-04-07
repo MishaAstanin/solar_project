@@ -29,11 +29,12 @@ class Command(BaseCommand):
     
     
         zip_filename = options["zip_filename"][0]
+        match_filename = options["match_filename"][0]
         upload_tag = get_upload_tag(zip_filename)
         dataset_tag = get_dataset_tag(zip_filename)
 
-        management.call_command("010_validate_input",  zip_filename,  options["match_filename"][0])
-        management.call_command("011_create_managing_instances",  zip_filename,  options["match_filename"][0])
+        management.call_command("010_validate_input",  zip_filename,  match_filename)
+        management.call_command("011_create_managing_instances",  zip_filename,  match_filename)
         management.call_command("012_filesystem_work",  upload_tag, dataset_tag)
         #management.call_command("012_filesystem_work",  upload_tag, dataset_tag, '--no-mv')
         management.call_command("013_cdffile_work",  upload_tag, dataset_tag)

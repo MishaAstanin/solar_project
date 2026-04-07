@@ -80,5 +80,3 @@ class Command(UploadRequired, BaseCommand):
             CDFFileStored.objects.bulk_create(cdf_stored_instances)
 
             make_log_entry(f"Saved {len(cdf_stored_instances)} instances of CDFFIleStored", "CREATED", upload=upload)
-
-

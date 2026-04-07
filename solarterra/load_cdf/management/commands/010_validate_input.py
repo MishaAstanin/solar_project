@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 import os
-import json
+import subprocess
 from django.conf import settings
 from load_cdf.models import make_log_entry
 from .evaluate_extras import command_logger
@@ -40,20 +40,22 @@ class Command(BaseCommand):
 
         # Read the match file
         try:
-            with open(match_file_path, 'r') as f:
-                match_data = json.load(f)
+            result = subprocess.run(
+                ['python', '-m', 'json.tool', match_file_path],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode != 0:
+                make_log_entry(f"Error decoding JSON from match file: JSONDecodeError. Check if the file is a valid JSON.", "ERROR")
+                exit(1)
 
             make_log_entry(f"Match file {match_filename} opens successfully.")
-
-        except json.JSONDecodeError:
-            make_log_entry(f"Error decoding JSON from match file: JSONDecodeError. Check if the file is a valid JSON.", "ERROR")
+        
+        except subprocess.TimeoutExpired:
+            make_log_entry(f"Error processing match file: timeout reading {match_filename}", "ERROR")
             exit(1)
 
         except Exception as e:
             make_log_entry(f"Error processing match file: {str(e)}", "ERROR")
             exit(1)
-
-
-
-
-

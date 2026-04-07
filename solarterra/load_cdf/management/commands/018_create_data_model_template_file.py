@@ -2,7 +2,6 @@ from django.core.management.base import BaseCommand
 import os
 from django.template.loader import render_to_string
 from load_cdf.models import *
-# from load_cdf.utils import *
 from load_cdf.utils import safe_str
 from .evaluate_extras import command_logger, UploadRequired
 
@@ -37,6 +36,3 @@ class Command(UploadRequired, BaseCommand):
             model_file.write(content)
 
         make_log_entry(f"Saved data model template file '{dynamic_model.model_file_path}'", "SUCCESS", upload=upload)
-
-
-

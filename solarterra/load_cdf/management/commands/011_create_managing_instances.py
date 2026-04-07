@@ -63,5 +63,3 @@ class Command(BaseCommand):
         except:
             make_log_entry(f"Upload instance for dataset '{dataset.tag}' with upload_tag '{upload.u_tag}' exists.", "ERROR", upload=upload)
             upload.terminate()
-
-

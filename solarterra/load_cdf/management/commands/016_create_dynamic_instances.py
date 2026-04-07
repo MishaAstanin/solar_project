@@ -97,6 +97,3 @@ class Command(UploadRequired, BaseCommand):
         DynamicField.objects.bulk_create(dmi.df_list)
         make_log_entry(f"Saved {dmi.fields.count()} data fields for model {dmi.model_name}", "CREATED", upload=upload)
         del dmi.df_list
-
-
-
