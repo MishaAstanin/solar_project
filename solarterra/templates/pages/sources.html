@@ -31,6 +31,11 @@
 		<div class="dataset" onclick="changeVisibility('dataset-list-{{ dataset.id }}');">{{ dataset.logical_description }} [{{ dataset.tag }}]</div>
 		<div id="dataset-list-{{ dataset.id }}" hidden>
 
+			<div class="dataset-buttons">
+				<button type="button" class="dataset-btn" onclick="event.stopPropagation(); selectAllInDataset('dataset-list-{{ dataset.id }}');">Выбрать все</button>
+				<button type="button" class="dataset-btn" onclick="event.stopPropagation(); deselectAllInDataset('dataset-list-{{ dataset.id }}');">Очистить</button>
+			</div>
+
 			{% for var in  dataset.plottable_variables %}
 			<div class="variable" onclick="countVars('variable-choice', 'var-count');checkOnetoOne('{{var.id}}');">
 				<input id="poser-{{ var.id }}" type="checkbox"  class="variable-choice">
