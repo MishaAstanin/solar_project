@@ -8,6 +8,8 @@ from solarterra.utils import NOW
 import os
 import numpy as np
 from django.core import management
+from django.db.models import Min, Max
+from solarterra.utils import bigint_ts_resolver
 
 
 #------ float32 tryout------------#
@@ -220,7 +222,36 @@ class Dataset(models.Model):
     
     def meta_variables(self):
         return self.variables.filter(var_logic_type="meta_data").order_by('name')
+    
+    def get_time_range(self):
+        if not hasattr(self, 'dynamic'):
+            return (None, None)
+        
+        data_model = self.dynamic.resolve_class()
+        if data_model is None:
+            return (None, None)
+        
+        epoch_field = self.dynamic.fields.filter(
+            field_name__icontains='epoch'
+        ).order_by('field_name').first()
 
+        if epoch_field is None:
+            return (None, None)
+        
+        result = data_model.objects.aggregate(
+            min_time=Min(epoch_field.field_name),
+            max_time=Max(epoch_field.field_name)
+        )
+
+        min_time = result['min_time']
+        max_time = result['max_time']
+        
+        if min_time is not None:
+            min_time = bigint_ts_resolver(min_time)
+        if max_time is not None:
+            max_time = bigint_ts_resolver(max_time)
+        
+        return (min_time, max_time)
 
 
 
