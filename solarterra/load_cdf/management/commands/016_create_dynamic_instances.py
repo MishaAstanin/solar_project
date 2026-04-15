@@ -51,6 +51,9 @@ class Command(UploadRequired, BaseCommand):
             var_name = safe_str(variable.name)
             print(f"var '{var_name}', dims {variable.dims}, dim_sizes {variable.dim_sizes}, labels {variable.lablaxis}")
 
+            if variable.is_nrv():
+                continue
+
             if variable.dims == 0:
                 dmi.df_list.append(DynamicField(
                     field_name=var_name,

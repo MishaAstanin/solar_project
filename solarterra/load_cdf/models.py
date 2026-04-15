@@ -53,6 +53,7 @@ class Upload(models.Model):
     # 6 step
     dynamic_model_created = models.BooleanField(default=False)
     # 7 step should is checked with a method instead
+    nrv_created = models.BooleanField(default=False)
     
     objects = GetManager()
 
@@ -378,6 +379,17 @@ class Variable(models.Model):
                 label += f", {self.units}"
 
         return label
+    
+    # NRV = depend_0 is NULL AND depend_1 is NULL AND name != epoch.
+    def is_nrv(self):
+        if self.depend_0 is not None or self.depend_1 is not None:
+            return False
+        
+        name_lower = self.name.lower()
+        if name_lower.startswith('epoch'):
+            return False
+        
+        return True
 
 
 class VariableAttribute(models.Model):
@@ -407,6 +419,24 @@ class VariableAttribute(models.Model):
     def __str__(self):
         return self.title
 
+
+class NRVData(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    field_name = models.CharField(max_length=100)
+    value = models.JSONField(blank=True, null=True)
+
+    dataset = models.ForeignKey(
+        "Dataset", on_delete=models.CASCADE, related_name="nrv_data")
+    variable = models.ForeignKey(
+        "Variable", on_delete=models.CASCADE, related_name="nrv_values")
+    data_type_instance = models.ForeignKey(
+        'DataType', related_name="nrv_fields",
+        on_delete=models.SET_NULL, blank=True, null=True)
+    
+    objects = GetManager()
+
+    def __str__(self):
+        return self.field_name
 
 # ------------demarcation to dynamic models---------------------#
 
