@@ -251,6 +251,31 @@ class Dataset(models.Model):
             min_time = bigint_ts_resolver(min_time)
         if max_time is not None:
             max_time = bigint_ts_resolver(max_time)
+
+        epoch_variable = epoch_field.variable_instance
+        _dt_fmt = "%d-%b-%Y %H:%M:%S.%f"
+
+        if min_time is not None and epoch_variable.validmin is not None:
+            try:
+                raw = epoch_variable.validmin
+                validmin_str = raw[0] if isinstance(raw, list) else raw
+                validmin_dt = datetime.datetime.strptime(validmin_str, _dt_fmt).replace(tzinfo=datetime.timezone.utc)
+
+                if min_time < validmin_dt:
+                    min_time = validmin_dt
+            except Exception:
+                pass
+
+        if max_time is not None and epoch_variable.validmax is not None:
+            try:
+                raw = epoch_variable.validmax
+                validmax_str = raw[0] if isinstance(raw, list) else raw
+                validmax_dt = datetime.datetime.strptime(validmax_str, _dt_fmt).replace(tzinfo=datetime.timezone.utc)
+
+                if max_time > validmax_dt:
+                    max_time = validmax_dt
+            except Exception:
+                pass
         
         return (min_time, max_time)
 
