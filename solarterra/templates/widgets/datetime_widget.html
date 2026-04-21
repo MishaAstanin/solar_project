@@ -108,7 +108,22 @@
 
     // function for validation input sting
     function isValidFormat(val) {
-      return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(val) && !isNaN(new Date(val.replace(' ', 'T')).getTime());
+      if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(val)) {
+        return false;
+      }
+
+      const [datePart, timePart] = val.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+      const d = new Date(val.replace(' ', 'T'));
+      
+      return d.getFullYear() === year
+        && d.getMonth() + 1 === month
+        && d.getDate()      === day
+        && d.getHours()     === hours
+        && d.getMinutes()   === minutes
+        && d.getSeconds()   === seconds;
     }
 
     function syncToCalendar(val) {
