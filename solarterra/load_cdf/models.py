@@ -37,6 +37,8 @@ class Upload(models.Model):
     
     matchfile_version = models.CharField(max_length=100, blank=True)
 
+    is_initial = models.BooleanField(default=True)
+
     # progress flags
     # 1 step
     dataset_created = models.BooleanField(default=False)
