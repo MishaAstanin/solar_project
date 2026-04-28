@@ -56,6 +56,6 @@ def search(request):
     else:
         return render(request, "pages/sources.html", context={
                 'datasets' : Dataset.objects.have_data().order_by('tag'),
-                'form' : SourceForm(initial={'ts_start' : dt.datetime(year=2013, month=1, day=1, hour=1), 'ts_end' : dt.datetime(year=2013, month=12, day=30, hour=1)}),
+                'form' : SourceForm(initial={'ts_start' : dt.datetime(year=2013, month=1, day=1, hour=0), 'ts_end' : dt.datetime(year=2013, month=12, day=30, hour=0)}),
                 'fresh' : True
         })
