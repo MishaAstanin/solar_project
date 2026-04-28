@@ -1,7 +1,7 @@
 main.py
 
 # Project specific files: migrations, data-models, config
-./configs/settings.json
+configs/settings.json
 
 ## Generated load_cdf migrations
 solarterra/loadcdf/migrations/*.py
