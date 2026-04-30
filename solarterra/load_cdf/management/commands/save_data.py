@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from spacepy import pycdf
 from load_cdf.models import *
 from load_cdf.utils import *
@@ -116,6 +117,25 @@ def save_single_file(cdf_file, fields, model_class, upload):
     
     cdf_obj.close()
 
+def delete_previous_file_data(cdf_file, model_class, upload):
+    old_cdf_files = CDFFileStored.objects.filter(full_path=cdf_file.full_path).exclude(pk=cdf_file.pk)
+
+    if not old_cdf_files.exists():
+        return
+
+    old_rows_qs = model_class.objects.filter(cdf_file__in=old_cdf_files)
+    old_rows_count = old_rows_qs.count()
+    old_rows_qs.delete()
+
+    old_cdf_files.update(loaded=False, saved_rows=0)
+
+    make_log_entry(
+        f"Found previous version of file '{cdf_file.full_path}'. "
+        f"Deleted {old_rows_count} old rows before reloading updated file.",
+        "INFO",
+        upload=upload
+    )
+
 class Command(UploadRequired, BaseCommand):
 
     help = "Command to load all data from the saved cdf files."
@@ -175,8 +195,12 @@ class Command(UploadRequired, BaseCommand):
             if cdf_file.loaded:
                 make_log_entry(f"File '{cdf_file.full_path}' is supposed to be loaded with {cdf_file.saved_rows}, skipping", upload=upload)
                 continue
-            t1 = timeit.default_timer() 
-            save_single_file(cdf_file, fields, model_class, upload)
+            t1 = timeit.default_timer()
+            
+            with transaction.atomic():
+                delete_previous_file_data(cdf_file, model_class, upload)
+                save_single_file(cdf_file, fields, model_class, upload) 
+            
             t2 = timeit.default_timer() 
             deltas.append(t2 - t1)
 
