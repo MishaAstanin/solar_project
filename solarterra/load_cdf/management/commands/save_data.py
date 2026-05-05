@@ -159,8 +159,8 @@ class Command(UploadRequired, BaseCommand):
         
         cdf_files = upload.cdf_files.all()
         if cdf_files.count() == 0:
-            make_log_entry("No files found to upload.", upload=upload)
-            exit(1)
+            make_log_entry("No new files found to upload. All files from this archive already exist in the dataset.", "INFO", upload=upload)
+            return
         else:
             make_log_entry(f"{cdf_files.count()} files are to be uploaded to the db.", upload=upload)
 

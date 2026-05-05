@@ -387,6 +387,20 @@ class SpectrogramPlot():
     def _load_energy_axis(self, dataset, data_class):
         try:
             energy_var = dataset.variables.get(name=self.variable.depend_1)
+
+            if energy_var.is_nrv():
+                nrv_entry = dataset.nrv_data.filter(variable=energy_var).first()
+                if nrv_entry is None or nrv_entry.value is None:
+                    raise ValueError(f"NRV entry for '{energy_var.name}' not found")
+                
+                self.y_axis = np.array(nrv_entry.value, dtype=float)
+                try:
+                    self.y_axis_label = energy_var.get_axis_label() or energy_var.name
+                except Exception:
+                    self.y_axis_label = energy_var.name
+                self.y_scaletyp = getattr(energy_var, 'scaletyp', None)
+                return
+        
             energy_field = energy_var.dynamic.filter(is_array_field=True).first()
 
             if energy_field is None:

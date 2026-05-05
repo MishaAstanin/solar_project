@@ -8,6 +8,8 @@ from solarterra.utils import NOW
 import os
 import numpy as np
 from django.core import management
+from django.db.models import Min, Max
+from solarterra.utils import bigint_ts_resolver
 
 
 #------ float32 tryout------------#
@@ -35,6 +37,8 @@ class Upload(models.Model):
     
     matchfile_version = models.CharField(max_length=100, blank=True)
 
+    is_initial = models.BooleanField(default=True)
+
     # progress flags
     # 1 step
     dataset_created = models.BooleanField(default=False)
@@ -51,6 +55,7 @@ class Upload(models.Model):
     # 6 step
     dynamic_model_created = models.BooleanField(default=False)
     # 7 step should is checked with a method instead
+    nrv_created = models.BooleanField(default=False)
     
     objects = GetManager()
 
@@ -220,7 +225,61 @@ class Dataset(models.Model):
     
     def meta_variables(self):
         return self.variables.filter(var_logic_type="meta_data").order_by('name')
+    
+    def get_time_range(self):
+        if not hasattr(self, 'dynamic'):
+            return (None, None)
+        
+        data_model = self.dynamic.resolve_class()
+        if data_model is None:
+            return (None, None)
+        
+        epoch_field = self.dynamic.fields.filter(
+            field_name__icontains='epoch'
+        ).order_by('field_name').first()
 
+        if epoch_field is None:
+            return (None, None)
+        
+        result = data_model.objects.aggregate(
+            min_time=Min(epoch_field.field_name),
+            max_time=Max(epoch_field.field_name)
+        )
+
+        min_time = result['min_time']
+        max_time = result['max_time']
+        
+        if min_time is not None:
+            min_time = bigint_ts_resolver(min_time)
+        if max_time is not None:
+            max_time = bigint_ts_resolver(max_time)
+
+        epoch_variable = epoch_field.variable_instance
+        _dt_fmt = "%d-%b-%Y %H:%M:%S.%f"
+
+        if min_time is not None and epoch_variable.validmin is not None:
+            try:
+                raw = epoch_variable.validmin
+                validmin_str = raw[0] if isinstance(raw, list) else raw
+                validmin_dt = datetime.datetime.strptime(validmin_str, _dt_fmt).replace(tzinfo=datetime.timezone.utc)
+
+                if min_time < validmin_dt:
+                    min_time = validmin_dt
+            except Exception:
+                pass
+
+        if max_time is not None and epoch_variable.validmax is not None:
+            try:
+                raw = epoch_variable.validmax
+                validmax_str = raw[0] if isinstance(raw, list) else raw
+                validmax_dt = datetime.datetime.strptime(validmax_str, _dt_fmt).replace(tzinfo=datetime.timezone.utc)
+
+                if max_time > validmax_dt:
+                    max_time = validmax_dt
+            except Exception:
+                pass
+        
+        return (min_time, max_time)
 
 
 
@@ -347,6 +406,17 @@ class Variable(models.Model):
                 label += f", {self.units}"
 
         return label
+    
+    # NRV = depend_0 is NULL AND depend_1 is NULL AND name != epoch.
+    def is_nrv(self):
+        if self.depend_0 is not None or self.depend_1 is not None:
+            return False
+        
+        name_lower = self.name.lower()
+        if name_lower.startswith('epoch'):
+            return False
+        
+        return True
 
 
 class VariableAttribute(models.Model):
@@ -376,6 +446,24 @@ class VariableAttribute(models.Model):
     def __str__(self):
         return self.title
 
+
+class NRVData(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    field_name = models.CharField(max_length=100)
+    value = models.JSONField(blank=True, null=True)
+
+    dataset = models.ForeignKey(
+        "Dataset", on_delete=models.CASCADE, related_name="nrv_data")
+    variable = models.ForeignKey(
+        "Variable", on_delete=models.CASCADE, related_name="nrv_values")
+    data_type_instance = models.ForeignKey(
+        'DataType', related_name="nrv_fields",
+        on_delete=models.SET_NULL, blank=True, null=True)
+    
+    objects = GetManager()
+
+    def __str__(self):
+        return self.field_name
 
 # ------------demarcation to dynamic models---------------------#
 

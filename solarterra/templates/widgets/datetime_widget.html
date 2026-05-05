@@ -27,7 +27,7 @@
 <div class="dtw-datetime-container" id="{{ widget.attrs.id }}-datetime-container">
     <div class="dtw-visible-container">
         <div class="dtw-input-container"  onclick="show('{{ widget.attrs.id }}-dropdown-container');">
-            <input readonly name="{{ widget.name }}" id="{{ widget.attrs.id }}" class="dtw-input-field" type="text" placeholder="yyyy-mm-dd hh:mm:ss" 
+            <input name="{{ widget.name }}" id="{{ widget.attrs.id }}" class="dtw-input-field" type="text" placeholder="yyyy-mm-dd hh:mm:ss" 
 			data-days="" data-months="" data-year=""
 			data-hours="00" data-minutes="00" data-seconds="00" {% if widget.value %}data-sub="{{ widget.value }}" data-prefix="{{ widget.attrs.id }}"{% endif %}>
         </div>
@@ -97,28 +97,141 @@
 
 <script>
 
-  
-
 	document.addEventListener("DOMContentLoaded", function() {
 		dtw_initTimeContainer('{{ widget.attrs.id }}');
     dtw_initCalendarContainer('{{ widget.attrs.id }}');
     dtw_initInput('{{widget.attrs.id}}');
+
+    const prefix = '{{ widget.attrs.id }}';
+    const inputField = document.getElementById('{{ widget.attrs.id }}');
+    const visibleContainer = document.getElementById('{{ widget.attrs.id }}-datetime-container').querySelector('.dtw-visible-container');
+
+    // function for validation input sting
+    function isValidFormat(val) {
+      if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(val)) {
+        return false;
+      }
+
+      const [datePart, timePart] = val.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = timePart.split(':').map(Number);
+
+      const d = new Date(val.replace(' ', 'T'));
+      
+      return d.getFullYear() === year
+        && d.getMonth() + 1 === month
+        && d.getDate()      === day
+        && d.getHours()     === hours
+        && d.getMinutes()   === minutes
+        && d.getSeconds()   === seconds;
+    }
+
+    function syncToCalendar(val) {
+      const [datePart, timePart] = val.split(' ');
+      const [year, month, day] = datePart.split('-');
+      const [hours, minutes, seconds] = timePart.split(':');
+
+      // update data attribute
+      inputField.dataset.year = year;
+      inputField.dataset.months = month;
+      inputField.dataset.days = day;
+      inputField.dataset.hours = hours;
+      inputField.dataset.minutes = minutes;
+      inputField.dataset.seconds = seconds;
+      inputField.dataset.sub = val;
+      inputField.dataset.prefix = prefix;
+
+      // redrawing the calendar data
+      const actualCalDays = document.getElementById(`${prefix}-cal-days-container`);
+      actualCalDays.innerHTML = '';
+
+      const newDate = new Date(Date.parse(val));
+      dtw_renderCalDays(prefix, newDate, true);
+      dtw_renderCalMonths(prefix, newDate);
+      dtw_renderCalYears(prefix, newDate);
+      dtw_renderCalNav(prefix, newDate);
+
+      const container = document.getElementById(`${prefix}-datetime-container`);
+
+      removeClassFromClass(container, 'dtw-js-hours', 'dtw-time-option-selected');
+      removeClassFromClass(container, 'dtw-js-minutes', 'dtw-time-option-selected');
+      removeClassFromClass(container, 'dtw-js-seconds', 'dtw-time-option-selected');
+
+      const hourEl = document.getElementById(`${prefix}-hour-${hours}`);
+      const minuteEl = document.getElementById(`${prefix}-minute-${minutes}`);
+      const secondEl = document.getElementById(`${prefix}-second-${seconds}`);
+
+      if (hourEl) {
+        hourEl.classList.add('dtw-time-option-selected');
+        hourEl.scrollIntoView({ behavior: 'smooth' });
+      }
+      if (minuteEl) {
+        minuteEl.classList.add('dtw-time-option-selected');
+        minuteEl.scrollIntoView({ behavior: 'smooth' });
+      }
+      if (secondEl) {
+        secondEl.classList.add('dtw-time-option-selected');
+        secondEl.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      dtw_buttonExchange(prefix, false);
+      confButtonChange(prefix, true);
+    }
+
+    // validate input
+    inputField.addEventListener('input', function () {
+      const val = inputField.value.trim();
+
+      if (val.length === 0) {
+        visibleContainer.classList.remove('dtw-error');
+        return;
+      }
+
+      if (isValidFormat(val)) {
+        visibleContainer.classList.remove('dtw-error');
+        syncToCalendar(val);
+      } else {
+        visibleContainer.classList.add('dtw-error');
+      }
+    });
+
+    // blocking form submission
+    const form = inputField.closest('form');
+    if (form && !form._submitHandlerAdded) {
+      form._submitHandlerAdded = true;
+
+      form.addEventListener('submit', function (event) {
+        let hasError = false;
+
+        form.querySelectorAll('.dtw-input-field').forEach(function (inp) {
+          const val = inp.value.trim();
+          const container = inp.closest('.dtw-datetime-container').querySelector('.dtw-visible-container');
+
+          if (!isValidFormat(val)) {
+            container.classList.add('dtw-error');
+            hasError = true;
+          }
+        });
+
+        if (hasError) {
+          event.preventDefault();
+          alert('Проверьте формат даты: yyyy-mm-dd hh:mm:ss');
+        }
+      });
+    }
 	});
 
   document.addEventListener("click", (event) => { 
     let full_element = document.getElementById("{{ widget.attrs.id }}-datetime-container");
     let dropdown_container = document.getElementById("{{ widget.attrs.id }}-dropdown-container");
 
-
     if ( !dropdown_container.hidden ) { 
       // if it is not a part of the element
       if (!full_element.contains(event.target) && document.body.contains(event.target)) {
-        console.log("hiding the dropdown!");
         dropdown_container.hidden = true;
       }
 
     }
   });
-
 
 </script>

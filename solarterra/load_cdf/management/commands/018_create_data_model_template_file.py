@@ -7,7 +7,7 @@ from .evaluate_extras import command_logger, UploadRequired
 
 class Command(UploadRequired, BaseCommand):
 
-    help = "Last step in evaluation process. Command creates data model template file."
+    help = "#8 step in evaluation process. Command creates data model template file."
     
     def add_arguments(self, parser):
         parser.add_argument("upload_tag", nargs=1, type=str)

@@ -63,6 +63,18 @@
 					<td>{{ dataset.directory }} &nbsp;<b>({{ dataset.files_found }} files)</b></td>
 				</tr>
 				<tr>
+					<th>Доступный временной интервал</th>
+					<td>
+						{% with dataset.get_time_range as time_range %}
+							{% if time_range.0 and time_range.1 %}
+								{{ time_range.0|date:"d.m.Y H:00" }} — {{ time_range.1|date:"d.m.Y H:00" }}
+							{% else %}
+								Нет данных
+							{% endif %}
+						{% endwith %}
+					</td>
+				</tr>
+				<tr>
 					<th>Uploads ({{ dataset.uploads.count }})</th>
 					<td>
 						{% for upload in dataset.uploads.all %}

@@ -82,3 +82,33 @@ function getPlot() {
     })
     
 }
+
+function selectAllInDataset(datasetBlockId) {
+    let datasetBlock = document.getElementById(datasetBlockId);
+    
+    let checkboxes = datasetBlock.querySelectorAll('.variable-choice');
+    
+    checkboxes.forEach(function(checkbox) {
+        checkbox.checked = true;
+
+        let variableId = checkbox.id.replace('poser-', '');
+        checkOnetoOne(variableId);
+    });
+    
+    countVars('variable-choice', 'var-count');
+}
+
+function deselectAllInDataset(datasetBlockId) {
+    let datasetBlock = document.getElementById(datasetBlockId);
+    
+    let checkboxes = datasetBlock.querySelectorAll('.variable-choice');
+    
+    checkboxes.forEach(function(checkbox) {
+        checkbox.checked = false;
+
+        let variableId = checkbox.id.replace('poser-', '');
+        checkOnetoOne(variableId);
+    });
+    
+    countVars('variable-choice', 'var-count');
+}

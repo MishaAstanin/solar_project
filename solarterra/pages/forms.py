@@ -51,15 +51,25 @@ class SourceForm(forms.Form):
     ts_start = forms.DateTimeField(
         label="От",
         required=True,
+        input_formats=["%Y-%m-%d %H:%M:%S"],
+        error_messages={
+            "required": "Укажите начальную дату.",
+            "invalid": "Введите дату строго в формате yyyy-mm-dd hh:mm:ss."
+        },
         widget=DateTimeWidget(attrs={'id': "dtw_start"})
     )
 
     ts_end = forms.DateTimeField(
         label="До",
         required=True,
+        input_formats=["%Y-%m-%d %H:%M:%S"],
+        error_messages={
+            "required": "Укажите конечную дату.",
+            "invalid": "Введите дату строго в формате yyyy-mm-dd hh:mm:ss."
+        },
         widget=DateTimeWidget(attrs={'id': "dtw_end"})
     )
-
+    
     validate = forms.BooleanField(
         label="Валидировать данные",
         required=False
@@ -70,6 +80,16 @@ class SourceForm(forms.Form):
         ts_start = cleaned_data.get("ts_start")
         ts_end = cleaned_data.get("ts_end")
 
-        if ts_start >= ts_end:
-            raise ValidationError("Start time should be before end time.")
+        if ts_start is not None and ts_end is not None:
+            if ts_start >= ts_end:
+                raise ValidationError("Start time should be before end time.")
+        return cleaned_data
+        
+class PlotForm(forms.Form):
+    ''' A stub for placing plot parameters later '''
+    pass
 
+
+class ExportForm(forms.Form):
+    ''' A stub for placing export parameters later '''
+    pass

@@ -26,3 +26,27 @@
 	margin-bottom: 1rem;
 }
 
+.dataset-buttons {
+    margin-left: 4rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.dataset-btn {
+    padding: 0.3rem 0.8rem;
+    margin-right: 0.5rem;
+    border: 1px solid #ccc;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.dataset-btn:hover {
+    background-color: #e0e0e0;
+    border-color: #999;
+}
+
+.dataset-btn:active {
+    background-color: #d0d0d0;
+}
