@@ -1,7 +1,7 @@
 from django.urls import path
 from pages import views
 from pages import search_views
-import uuid
+
 
 urlpatterns = [
     path('', views.main_page, name="main_page"),
@@ -12,6 +12,7 @@ urlpatterns = [
     path('variable_info/<uuid:variable_id>', views.variable_info, name="variable"),
     
     # search and plotting
+    path("missions", search_views.select_missions, name="select_missions"),
     path('search', search_views.search, name="search"),
     
     # technical data

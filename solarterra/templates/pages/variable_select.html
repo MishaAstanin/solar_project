@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block page_title %}
-    Поиск по наборам данных
+    Выбор переменных
 {% endblock %}
 
 {% block page_css %}
@@ -18,9 +18,13 @@
 
 
 <div class="page-title">
-    1. Выбор переменных
+    2. Выбор переменных
 </div>
 
+<div>
+    <div><b>Выбранные миссии:</b> {{ selected_missions|join:", " }}</div>
+    <div><a href="{% url 'select_missions' %}">Изменить миссии</a></div>
+</div>
 
 <div>
 {% regroup datasets by mission as missions %}
@@ -55,13 +59,14 @@
 
 <div>Выбрано: <span id="var-count">0</span></div>
 
+<div>{{ form.variables.errors }}</div>
 
-<div id="step-2" {% if fresh %} hidden {% endif %}>
+<div id="step-2" {% if not has_errors %}hidden{% endif %}>
 	<form id="form" method="post" action="{% url 'search' %}" target="_blank">
 	
 	{% csrf_token %}
-	<div hidden>{{ form.sources }}</div>
-	<div class="page-title">2. Выбор временного диапазона</div>
+	<div hidden>{{ form.variables }}</div>
+	<div class="page-title">3. Выбор временного диапазона</div>
 
 	<div class="simple-flex">
 		<div>{{ form.ts_start.label }}</div>

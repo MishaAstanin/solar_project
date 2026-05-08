@@ -1,61 +1,62 @@
-from django.shortcuts import render
-from load_cdf.models import *
-from data_cdf.models import *
-from django.http import Http404
-from django.apps import apps
-
-from pages.forms import SourceForm
+from django.shortcuts import render, redirect
+from load_cdf.models import Dataset
+from pages.forms import MissionSelectForm, VariableSelectForm
 import datetime as dt
-
 from pages.plotting import get_plots
 
 
+def select_missions(request):
+    if request.method == "POST":
+        form = MissionSelectForm(request.POST)
+        if form.is_valid():
+            request.session["selected_missions"] = form.cleaned_data["missions"]
+            return redirect("search")
+    else:
+        form = MissionSelectForm()
+
+    return render(request, "pages/mission_select.html", context={"form": form})
+
 def search(request):
+    selected_missions = request.session.get("selected_missions")
+
+    if not selected_missions:
+        return redirect("select_missions")
+
+    datasets = (
+        Dataset.objects.have_data()
+        .filter(mission__in=selected_missions)
+        .order_by("mission", "tag")
+    )
     
     if request.method == 'POST':
-        source_form = SourceForm(data=request.POST)
+        form = VariableSelectForm(request.POST, missions=selected_missions)
  
-        if source_form.is_valid():
-            print("valid!")
-            # go and play, you are free, child
-            var_instances = Variable.objects.filter(id__in=source_form.cleaned_data['sources'])
-            t_start = source_form.cleaned_data['ts_start']
-            t_stop = source_form.cleaned_data['ts_end']
-            validate = source_form.cleaned_data['validate']
+        if form.is_valid():
+            var_instances = form.cleaned_data['variables']
+            t_start = form.cleaned_data['ts_start']
+            t_stop = form.cleaned_data['ts_end']
+            validate = form.cleaned_data['validate']
+
             plots = get_plots(var_instances, t_start, t_stop, validate)
-            #bin_instance = plots[0].bin_instance
-            #print("BIN INSTANCE", bin_instance, bin_instance.bin_seconds)
-            """ 
-            left_form = SourceForm(initial={
-                't_start' : bin_instance.t_previous(t_start), 
-                't_end' : t_start, 
-                'sources' : source_form.cleaned_data['sources']})
-            right_form = SourceForm(initial={
-                't_start' : t_stop, 
-                't_end' : bin_instance.t_next(t_stop), 
-                'sources' : source_form.cleaned_data['sources']})
-            """
+
             context = {
                 't_start' : t_start,
                 't_stop' : t_stop,
-                'plots' : plots,
-                #'bin_instance' : bin_instance,
-                #'left_form' : left_form,
-                #'right_form' : right_form
-                
+                'plots' : plots,          
             }
             return render(request, "pages/plot_page.html", context=context)
-
-        else:
-            # finish page reconstruction after invalid values or do form validation client-side
-            print("invalid!")
-            return render(request, "pages/sources.html", context={
-                'datasets' : Dataset.objects.have_data().order_by('tag'),
-                'form' : source_form
-            })
     else:
-        return render(request, "pages/sources.html", context={
-                'datasets' : Dataset.objects.have_data().order_by('tag'),
-                'form' : SourceForm(initial={'ts_start' : dt.datetime(year=2013, month=1, day=1, hour=0), 'ts_end' : dt.datetime(year=2013, month=12, day=30, hour=0)}),
-                'fresh' : True
-        })
+        form = VariableSelectForm(
+            missions=selected_missions,
+            initial={
+                'ts_start': dt.datetime(year=2013, month=1, day=1, hour=0),
+                'ts_end': dt.datetime(year=2013, month=12, day=30, hour=0),
+            }
+        )
+
+    return render(request, "pages/variable_select.html", context={
+        'datasets': datasets,
+        'form': form,
+        'selected_missions': selected_missions,
+        "has_errors": bool(form.errors),
+    })
