@@ -2,8 +2,69 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 
+
 PLOT_HEIGHT = 250
 PLOT_MARGIN = dict(l=80, r=80, t=0, b=20)
+AXIS_COLOR = "black"
+AXIS_LINE_WIDTH = 1
+MAJOR_TICK_LEN = 8
+MAJOR_TICK_WIDTH = 1
+MINOR_TICK_LEN = 4
+MINOR_TICK_WIDTH = 1 
+GRID_WIDTH = 1
+GRID_COLOR = "rgba(0, 0, 0, 0.15)"
+TICK_FONT_SIZE = 14
+
+
+def apply_common_layout(fig, height):
+    fig.update_layout(
+        height=height,               # высота
+        margin=PLOT_MARGIN,          # отступы
+        autosize=True,               # пересчет размера
+        showlegend=False,            # легенда
+        plot_bgcolor="white",        # внутри осей
+        paper_bgcolor="white",       # вне осей
+    )
+
+
+def apply_axis_style(fig):
+    common_axis_kwargs = dict(
+        showline=True,               # ось
+        linecolor=AXIS_COLOR,        # цвет оси
+        linewidth=AXIS_LINE_WIDTH,   # толщина оси
+        ticks="inside",              # тики внутрь
+        tickcolor=AXIS_COLOR,        # цвет тиков
+        ticklen=MAJOR_TICK_LEN,      # длина тиков
+        tickwidth=MAJOR_TICK_WIDTH,  # толщина тиков
+        tickfont=dict(               # подписи тиков
+            size=TICK_FONT_SIZE,
+            color=AXIS_COLOR,
+        ),
+        showgrid=True,               # сетка
+        gridcolor=GRID_COLOR,        # цвет сетки
+        gridwidth=GRID_WIDTH,        # толщина сетки
+        zeroline=False,              # нулевая линия
+    )
+
+    # короткие тики
+    minor_axis_kwargs = dict(
+        ticks="inside",
+        ticklen=MINOR_TICK_LEN,
+        tickwidth=MINOR_TICK_WIDTH,
+        tickcolor=AXIS_COLOR,
+        showgrid=False,
+    )
+
+    fig.update_xaxes(
+        **common_axis_kwargs,
+        minor=minor_axis_kwargs,
+    )
+
+    fig.update_yaxes(
+        **common_axis_kwargs,
+        minor=minor_axis_kwargs,
+    )
+
 
 def scatter(plot):
 
@@ -19,24 +80,18 @@ def scatter(plot):
 
     fig.update_traces(connectgaps=False, marker=dict(size=4))
 
-    fig.update_layout(
-        height=PLOT_HEIGHT,
-        margin=PLOT_MARGIN,
-        autosize=True,
-        showlegend=False,
-    )
+    apply_common_layout(fig, PLOT_HEIGHT)
+    apply_axis_style(fig)
 
     fig.update_xaxes(
         range=[plot.t_start, plot.t_stop],
         title_text='Time, UT',
-        tickfont=dict(size=14),
     )
 
     fig.update_yaxes(
         title_text=plot.variable.get_axis_label(),
         type=plot.variable.scaletyp,
         automargin=False,
-        tickfont=dict(size=14),
     )
 
     config = {'displayModeBar': False}
@@ -74,28 +129,21 @@ def n_trace(plot):
 
     fig.update_traces(marker=dict(size=4))
     
-    fig.update_layout(
-        height=PLOT_HEIGHT * len(fields),
-        margin=PLOT_MARGIN,
-        autosize=True,
-        showlegend=False,
-    )
+    apply_common_layout(fig, PLOT_HEIGHT * len(fields))
+    apply_axis_style(fig)
 
     fig.update_xaxes(
         range=[plot.t_start, plot.t_stop],
-        tickfont=dict(size=14),
     )
 
     fig.update_xaxes(
         title_text='Time, UT',
         row=len(fields),
         col=1,
-        tickfont=dict(size=14),
     )
 
     fig.update_yaxes(
         automargin=False,
-        tickfont=dict(size=14),
     )
 
     config = {'displayModeBar': False}
@@ -103,6 +151,7 @@ def n_trace(plot):
                            div_id=f"plot_div_{plot.variable.id}", default_width="100%")
 
     return plot_div
+
 
 def spectrogram(plot):
     if plot.z_matrix is None or plot.z_matrix.size == 0:
@@ -154,23 +203,17 @@ def spectrogram(plot):
         hoverongaps=False,
     ))
 
-    fig.update_layout(
-        height=PLOT_HEIGHT,
-        margin=PLOT_MARGIN,
-        autosize=True,
-        showlegend=False,
-    )
+    apply_common_layout(fig, PLOT_HEIGHT)
+    apply_axis_style(fig)
 
     fig.update_xaxes(
         range=[plot.t_start, plot.t_stop],
         title_text='Time, UT',
-        tickfont=dict(size=14),
     )
 
     fig.update_yaxes(
         title_text=plot.y_axis_label,
         automargin=False,
-        tickfont=dict(size=14),
     )
 
     if plot.y_scaletyp == 'log':
