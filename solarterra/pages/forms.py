@@ -91,7 +91,7 @@ class VariableSelectForm(forms.Form):
         },
         widget=DateTimeWidget(attrs={'id': "dtw_end"})
     )
-
+    
     validate = forms.BooleanField(
         label="Валидировать данные",
         required=False
@@ -117,5 +117,12 @@ class VariableSelectForm(forms.Form):
         if ts_start is not None and ts_end is not None:
             if ts_start >= ts_end:
                 raise ValidationError("Начальная дата должна быть раньше конечной.")
-
         return cleaned_data
+        
+class PlotForm(forms.Form):
+    ''' A stub for placing plot parameters later '''
+    pass
+                
+class ExportForm(forms.Form):
+    ''' A stub for placing export parameters later '''
+    pass

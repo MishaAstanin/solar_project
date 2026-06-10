@@ -14,7 +14,7 @@
 
 {% block page %}
 
-{{ form.media }}
+{{ var_form.media }}
 
 
 <div class="page-title">
@@ -59,35 +59,45 @@
 
 <div>Выбрано: <span id="var-count">0</span></div>
 
-<div>{{ form.variables.errors }}</div>
+<div>{{ var_form.variables.errors }}</div>
 
 <div id="step-2" {% if not has_errors %}hidden{% endif %}>
-	<form id="form" method="post" action="{% url 'search' %}" target="_blank">
+	<form id="var_form" method="post" action="{% url 'select_variables' %}" target="_blank">
 	
 	{% csrf_token %}
-	<div hidden>{{ form.variables }}</div>
+	<div hidden>{{ var_form.variables }}</div>
 	<div class="page-title">3. Выбор временного диапазона</div>
 
 	<div class="simple-flex">
-		<div>{{ form.ts_start.label }}</div>
-		<div>{{ form.ts_start }}</div>
+		<div>{{ var_form.ts_start.label }}</div>
+		<div>{{ var_form.ts_start }}</div>
 	</div>
-	<div>{{ form.errors.ts_start }}</div>
-	
+	<div>{{ var_form.errors.ts_start }}</div>
+
 	<div class="simple-flex">
-		<div>{{ form.ts_end.label }}</div>
-		<div>{{ form.ts_end }}</div>
+		<div>{{ var_form.ts_end.label }}</div>
+		<div>{{ var_form.ts_end }}</div>
 	</div>
-	<div>{{ form.errors.ts_end }}</div>
+	<div>{{ var_form.errors.ts_end }}</div>
 
-	<div>{{ form.validate }} <label for="id_validate"> {{ form.validate.label }}</label></div>
-	
-
-	<div>{{ form.non_field_errors }}</div>
+	<div>{{ var_form.validate }} <label for="id_validate"> {{ var_form.validate.label }}</label></div>
 
 
-	<div><button class="btn" type="submit" >Поcтроить</button></div>
-	
+	<div>
+		{{ var_form.non_field_errors }}
+		{{ plot_form.non_field_errors }}
+		{{ export_form.non_field_errors }}
+	</div>
+
+
+	{#TODO: clean up style here #}
+	<div class="page-title">3. Параметры построения и экспорта</div>
+
+	<div>
+		<button class="btn" type="submit" formaction="{% url 'plot_clicked' %}" formtarget="_blank">Поcтроить</button>
+		<button class="btn" type="submit" formaction="{% url 'export_clicked' %}" formtarget="_blank">Экспортировать данные</button>
+	</div>
+
 	</form>
 </div>
 

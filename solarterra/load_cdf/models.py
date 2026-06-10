@@ -9,7 +9,7 @@ import os
 import numpy as np
 from django.core import management
 from django.db.models import Min, Max
-from solarterra.utils import bigint_ts_resolver
+from solarterra.utils import bigint_ts_resolver as it
 
 
 #------ float32 tryout------------#
@@ -556,10 +556,9 @@ class DynamicField(models.Model):
 
     # actual variable instance it represents
     variable_instance = models.ForeignKey("Variable", on_delete=models.CASCADE, related_name="dynamic")
-    
+
     # field of which model is it
     dynamic_model = models.ForeignKey("DynamicModel", on_delete=models.CASCADE, related_name="fields")
-
     data_type_instance = models.ForeignKey('DataType', related_name="fields", on_delete=models.SET_NULL, blank=True, null=True)
 
     objects = GetManager()
@@ -570,9 +569,56 @@ class DynamicField(models.Model):
             setattr(self, key, value)
         self.save()
 
-
     def __str__(self):
         return self.field_name
+
+    def get_format_str(self):
+        '''
+        Can be a single str for dims = 0, always a list for dims = 1. Dims > 1 is not supported yet.
+        '''
+        var = self.variable_instance
+        format_str = None
+        if var.output_format is not None:
+            if var.dims == 0:
+                format_str = var.output_format
+            elif var.dims == 1:
+                #it can be a single value or a list already, make it a list always
+                if isinstance(var.output_format, list):
+                    format_str = var.output_format
+                else:
+                    format_str = [var.output_format] * var.dim_sizes
+        return format_str
+
+    def set_format_function(self):
+        '''Correct usage for a single record of multipart field: formatted_list = [f(val) for f,val in zip(field.format_function, field_values)]
+        Or can be called like field.format_function[0](val_0)'''
+        
+        format_str = self.get_format_str()
+        if isinstance(format_str, list): 
+            self.format_function = [self.make_format_function(self.data_type_instance, fs) for fs in format_str]
+        else:
+            self.format_function = self.make_format_function(self.data_type_instance, format_string)
+
+        return format_function
+
+    @staticmethod
+    def make_format_function(type_instance, format_str):
+        '''Factory for field-specific formatter functions. X should be passed in proper python type.'''
+
+        if type_instance.is_epoch():
+            #nb: the current uploader is ommiting milliseconds completely (it rounds the timestamps to seconds)
+            return lambda x: it(x).strftime("%Y-%m-%d %H:%M:%S") + f"-{it(x).microsecond // 1000:03d}" if (x is not None and x is not np.nan) else "NaN"
+        elif format_str is not None and "i" in format_str.lower():
+            #it is usually for year/day/etc, doesn't really need to be zero-padded; added as a place to add different behavior for int types if needed
+            return lambda x: str(int(x)) if (x is not None and x is not np.nan) else "NaN"
+        elif format_str is not None and "f" in format_str.lower():
+            return lambda x: f"{x:{format_str.lower().strip('f')}f}" if (x is not None and x is not np.nan) else "NaN"
+        elif format_str is not None and "e" in format_str.lower():
+            #scientific float formatter
+            return lambda x: f"{x:{format_str.lower().strip('e')}e}" if (x is not None and x is not np.nan) else "NaN"
+        else:
+            #fallback
+            return lambda x: str(x) if (x is not None and x is not np.nan) else "NaN"
 
     # def get_time_field(self):
     #     time_var = self.variable_instance.dataset.variables.filter(
