@@ -224,7 +224,10 @@ class Dataset(models.Model):
         return self.variables.filter(var_logic_type="support_data").order_by('name')
     
     def meta_variables(self):
-        return self.variables.filter(var_logic_type="meta_data").order_by('name')
+        return self.variables.filter(var_logic_type="metadata").order_by('name')
+    
+    def ignore_variables(self):
+        return self.variables.filter(var_logic_type="ignore_data").order_by('name')
     
     def get_time_range(self):
         if not hasattr(self, 'dynamic'):
