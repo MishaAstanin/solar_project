@@ -208,3 +208,12 @@ class Command(UploadRequired, BaseCommand):
                 make_log_entry(f"{current_percent}% done, {index + 1} files uploaded, total time {round(sum(deltas), 5)}, avg time per file {round(sum(deltas) / len(deltas), 5)}", upload=upload)
                 print(f"{current_percent}% done, {index + 1} files uploaded, total time {round(sum(deltas), 5)}, avg time per file {round(sum(deltas) / len(deltas), 5)}")
                 percent = current_percent
+        
+        upload.dataset.rebuild_time_range()
+
+        make_log_entry(
+            f"Updated dataset time range: "
+            f"{upload.dataset.time_start} .. {upload.dataset.time_end}",
+            "INFO",
+            upload=upload
+        )
