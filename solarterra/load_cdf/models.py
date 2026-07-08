@@ -735,7 +735,7 @@ class DataType(models.Model):
 
 
     def is_epoch(self):
-        return 'EPOCH' in self.cdf_file_label
+        return self.cdf_file_label in {'CDF_EPOCH', 'CDF_EPOCH16', 'CDF_TIME_TT2000'}
 
 
 class LogEntry(models.Model):
