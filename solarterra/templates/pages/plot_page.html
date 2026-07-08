@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block page_css %}
-
+    <link rel="stylesheet" href="{% static 'search.css' %}">
 {% endblock %}
 
 {% block page %}
@@ -23,6 +23,26 @@
     <div>{{ left_form }}</div>
     <div>{{ right_form }}</div>
 
+    <form method="post" action="{% url 'plot_clicked' %}" class="plot-navigation-form">
+        {% csrf_token %}
+
+        {% for variable_id in selected_variable_ids %}
+            <input type="hidden" name="variables" value="{{ variable_id }}">
+        {% endfor %}
+
+        <input type="hidden" name="ts_start" value="{{ t_start|date:'Y-m-d H:i:s' }}">
+        <input type="hidden" name="ts_end" value="{{ t_stop|date:'Y-m-d H:i:s' }}">
+
+        {% if validate %}
+            <input type="hidden" name="validate" value="on">
+        {% endif %}
+
+        <div class="shift-buttons">
+            <button type="submit" name="shift" value="prev" class="dataset-btn">Предыдущий интервал</button>
+            <button type="submit" name="shift" value="next" class="dataset-btn">Следующий интервал</button>
+        </div>
+    </form>
+    
     <div>
         {% for plot in plots %}
 

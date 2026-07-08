@@ -37,6 +37,12 @@
     margin-top: 0.5rem;
 }
 
+.shift-buttons {
+	margin-left: 1rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+}
+
 .dataset-btn {
     padding: 0.3rem 0.8rem;
     margin-right: 0.5rem;
