@@ -8,6 +8,7 @@
 
 {% block page_css %}
     <link rel="stylesheet" href="{% static 'search.css' %}">
+    <link rel="stylesheet" href="{% static 'plots.css' %}"> 
 {% endblock %}
 
 {% block page %}
@@ -38,8 +39,8 @@
         {% endif %}
 
         <div class="shift-buttons">
-            <button type="submit" name="shift" value="prev" class="dataset-btn">Предыдущий интервал</button>
-            <button type="submit" name="shift" value="next" class="dataset-btn">Следующий интервал</button>
+            <button type="submit" name="shift" value="prev" class="base-btn">Предыдущий интервал</button>
+            <button type="submit" name="shift" value="next" class="base-btn">Следующий интервал</button>
         </div>
     </form>
     

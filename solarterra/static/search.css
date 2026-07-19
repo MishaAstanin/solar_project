@@ -1,4 +1,3 @@
-
 .mission {
 	padding: 0.2rem 0.5rem;
 	border: 1px solid #ccc;
@@ -26,24 +25,7 @@
 	margin-bottom: 1rem;
 }
 
-.container-buttons, .change-buttons {
-    margin-bottom: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.dataset-buttons {
-    margin-left: 4rem;
-    margin-bottom: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.shift-buttons {
-	margin-left: 1rem;
-    margin-bottom: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.dataset-btn {
+.base-btn {
     padding: 0.3rem 0.8rem;
     margin-right: 0.5rem;
     border: 1px solid #ccc;
@@ -53,12 +35,29 @@
     transition: background-color 0.2s, border-color 0.2s;
 }
 
-.dataset-btn:hover {
+.base-btn:hover {
     background-color: #e0e0e0;
     border-color: #999;
 	color: inherit;
 }
 
-.dataset-btn:active {
+.base-btn:active {
     background-color: #d0d0d0;
+}
+
+.all-var-buttons, .change-mission-btn {
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.all-dataset-var-buttons {
+    margin-left: 4rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.shift-buttons {
+	margin-left: 1rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
 }
