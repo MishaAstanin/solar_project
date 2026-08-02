@@ -214,6 +214,9 @@ class Plot():
     
     # index that marks values beyond validmin - valimax interval
     def validation_index(self, arr, field_index=None):
+        if arr is None or len(arr) == 0:
+            return None
+
         condition = False
         
         if self.variable.validmin is not None:

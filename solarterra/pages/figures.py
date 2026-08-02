@@ -130,7 +130,7 @@ def n_trace(plot):
 
     fields = plot.y_fields
     
-    if len(plot.y_arrays) == 0:
+    if len(plot.y_arrays) == 0 or all(len(arr) == 0 for arr in plot.y_arrays):
         return '<div class="no_data">No significant data for this period.</div>'
 
     fig = make_subplots(rows=len(fields), cols=1,
