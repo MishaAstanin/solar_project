@@ -61,16 +61,30 @@ def select_variables(request):
 
     return render(request, "pages/variable_select.html", context)
 
+
 def shift_interval(t_start, t_stop, direction):
+    shift_map = {
+        "prev": (-1, 1),
+        "prev_half": (-1, 2),
+        "prev_quarter": (-1, 4),
+        "next_quarter": (1, 4),
+        "next_half": (1, 2),
+        "next": (1, 1),
+    }
+
+    shift_config = shift_map.get(direction)
+    if shift_config is None:
+        return t_start, t_stop
+
+    sign, divisor = shift_config
     interval = t_stop - t_start
+    shift = interval / divisor
 
-    if direction == "prev":
-        return t_start - interval, t_stop - interval
+    if sign < 0:
+        return t_start - shift, t_stop - shift
 
-    if direction == "next":
-        return t_start + interval, t_stop + interval
+    return t_start + shift, t_stop + shift
 
-    return t_start, t_stop
 
 def plot_clicked(request):
     '''
@@ -106,8 +120,7 @@ def plot_clicked(request):
         #some_plot_param = plot_form.cleaned_data['some_plot_param']
 
         shift_direction = request.POST.get("shift")
-        if shift_direction in {"prev", "next"}:
-            t_start, t_stop = shift_interval(t_start, t_stop, shift_direction)
+        t_start, t_stop = shift_interval(t_start, t_stop, shift_direction)
 
         #get plots
         plots = get_plots(var_instances, t_start, t_stop, validate)
