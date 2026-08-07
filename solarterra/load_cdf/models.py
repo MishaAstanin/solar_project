@@ -450,7 +450,7 @@ class Variable(models.Model):
                 return field_instance.data_type_instance.numpy_type
 
     def get_list_of_fields(self):
-        return list(self.dynamic.order_by('multipart_index').values_list('field_name', flat=True))
+        return list(self.dynamic.values_list('field_name', flat=True))
     
     def ordered_attributes(self):
         return self.attributes.order_by('title')
@@ -652,14 +652,15 @@ class DynamicField(models.Model):
     def set_format_function(self):
         '''Correct usage for a single record of multipart field: formatted_list = [f(val) for f,val in zip(field.format_function, field_values)]
         Or can be called like field.format_function[0](val_0)'''
+        #TODO: make a wrapper function that takes a list of values and returns a list of formatted values, so that the user doesn't have to deal with the list of functions
         
         format_str = self.get_format_str()
         if isinstance(format_str, list): 
             self.format_function = [self.make_format_function(self.data_type_instance, fs) for fs in format_str]
         else:
-            self.format_function = self.make_format_function(self.data_type_instance, format_string)
+            self.format_function = self.make_format_function(self.data_type_instance, format_str)
 
-        return format_function
+        return self.format_function
 
     @staticmethod
     def make_format_function(type_instance, format_str):

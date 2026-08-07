@@ -72,7 +72,22 @@ class DataHandler():
         # if queryset is not completely empty
         if self.queryset.exists():
 
-            rows = self.queryset.values_list(*self.all_field_names)
+            rows = list(self.queryset.values_list(*self.all_field_names))
+
+            # expand array field columns into N scalar columns before stacking
+            if any(df.is_array_field for df in self.data_fields):
+                expanded = []
+                for row in rows:
+                    flat = [row[0]]  # epoch
+                    for i, df in enumerate(self.data_fields):
+                        val = row[i + 1]
+                        if df.is_array_field:
+                            flat.extend(val if val is not None else [None] * df.array_size)
+                        else:
+                            flat.append(val)
+                    expanded.append(flat)
+                rows = expanded
+
             pile = np.stack(rows)
             print("PILE SHAPE", pile.shape)
             # sort everything by the first row
@@ -93,25 +108,26 @@ class DataHandler():
             self.mask = None
 
     #---VALIDATION---
-    def _get_bounds_for_field(self, dyn_field):
-        '''Resolve validmin/validmax for a dynamic field, accounting for multipart variables.'''
+    def _get_bounds_for_field(self, dyn_field, index=None):
+        '''Resolve validmin/validmax for a dynamic field, using index for array field components.'''
         variable = dyn_field.variable_instance
 
         vmin = variable.validmin
-        if vmin is not None and dyn_field.multipart and isinstance(vmin, list):
-            vmin = vmin[dyn_field.multipart_index - 1]
+        if vmin is not None and dyn_field.is_array_field and index is not None and isinstance(vmin, list):
+            vmin = vmin[index]
 
         vmax = variable.validmax
-        if vmax is not None and dyn_field.multipart and isinstance(vmax, list):
-            vmax = vmax[dyn_field.multipart_index - 1]
+        if vmax is not None and dyn_field.is_array_field and index is not None and isinstance(vmax, list):
+            vmax = vmax[index]
 
         return vmin, vmax
 
     def add_validation_to_mask(self):
         '''Update the boolean mask in-place to mark out-of-bounds values as False.'''
 
-        for idx, df in enumerate(self.data_fields, start=1):
-            vmin_str, vmax_str = self._get_bounds_for_field(df)
+        expanded = [(df, i) for df in self.data_fields for i in (range(df.array_size) if df.is_array_field else [None])]
+        for idx, (df, index) in enumerate(expanded, start=1):
+            vmin_str, vmax_str = self._get_bounds_for_field(df, index)
             if vmin_str is None and vmax_str is None:
                 continue
             
@@ -130,7 +146,8 @@ class DataHandler():
 
     def clean_data(self):
         '''Cast data into proper types, swap unvalid values to None, then converts to numpy object'''
-        for idx, df in enumerate(self.data_fields, start=1):
+        expanded = [df for df in self.data_fields for _ in (range(df.array_size) if df.is_array_field else [None])]
+        for idx, df in enumerate(expanded, start=1):
             var_array = self.data_by_var[idx, :]
             mask = self.mask[idx, :]
             ok_values = var_array[mask].astype(df.data_type_instance.numpy_type)
@@ -179,7 +196,16 @@ class DataHandler():
         
         # initialize empty arrays for aggregated data
         agg_data_by_var = [self.bin_centers_array]
-        for idx, df in enumerate(self.data_fields, start=1):
+
+        # expand array fields so column indices match data_by_var
+        expanded_fields = []
+        for df in self.data_fields:
+            if df.is_array_field:
+                expanded_fields.extend([df] * df.array_size)
+            else:
+                expanded_fields.append(df)
+
+        for idx, df in enumerate(expanded_fields, start=1):
 
             var_array = self.data_by_var[idx, :]
             mask = self.mask[idx, :]
@@ -285,7 +311,7 @@ class PlainTextMeta():
         self.depend_field = var_group[0].get_depend_field()
 
         # Get all field names ordered by variable name then component index to match header
-        dyn_fields_q = DynamicField.objects.filter(variable_instance__in=var_group).order_by('variable_instance__name', 'multipart_index')
+        dyn_fields_q = DynamicField.objects.filter(variable_instance__in=var_group).order_by('variable_instance__name')
         self.dyn_fields = list(dyn_fields_q.all()) #field instances
         print(
             f"[EXPORT] in _table_builder. dataset={self.dataset.tag}, depend_field={self.depend_field.field_name}, "
@@ -294,6 +320,14 @@ class PlainTextMeta():
         # prepend epoch/depend field so labels, units, formats, colwidths align with record_arrays column order
         # epoch isn't added to fields which are passed to query because it will be added as the filter_field in the query
         self.dyn_fields = [self.depend_field] + self.dyn_fields
+
+        # flat list of (dyn_field, index_or_None): array fields expand to array_size entries
+        self.columns = [(self.depend_field, None)]
+        for df in self.dyn_fields[1:]:
+            if df.is_array_field:
+                self.columns += [(df, i) for i in range(df.array_size)]
+            else:
+                self.columns.append((df, None))
 
         self.info = {
             'validate': False,
@@ -315,29 +349,26 @@ class PlainTextMeta():
 
     def set_labels_and_units(self):
 
-        self.labels = ['Epoch']
-        self.units = ['dd-mm-yyyy hh:mm:ss.ms']
-        for df in self.dyn_fields[1:]:
-            var_instance = df.variable_instance
-            print(df.field_name)
-            if df.multipart:
-                label = var_instance.lablaxis[df.multipart_index - 1]
-                #it happens so that some variables have a single unit for all components, not a list with repeated one
-                if isinstance(var_instance.units, str):
-                    unit = var_instance.units
-                else:
-                    unit = var_instance.units[df.multipart_index - 1]
-            else:
-                label = var_instance.lablaxis
-                unit = var_instance.units
-            self.labels.append(label if label is not None else '')
-            self.units.append(unit if unit is not None else '')
+        self.labels = []
+        self.units = []
+        for df, index in self.columns:
+            if df.data_type_instance.is_epoch():
+                self.labels.append('Epoch')
+                self.units.append('dd-mm-yyyy hh:mm:ss.ms')
+                continue
+            var = df.variable_instance
+            label = var._pick_axis_value(var._get_axis_labels_source(), index)
+            unit = var._pick_axis_value(var.units, index) 
+            self.labels.append(label if label else '')
+            self.units.append(unit if unit else '')
 
     def set_type_and_format_pairs(self):
 
         self.type_and_format_pairs = []
-        for df in self.dyn_fields:
+        for df, index in self.columns:
             format_str = df.get_format_str()
+            if isinstance(format_str, list) and index is not None:
+                format_str = format_str[index]
             type_instance = df.data_type_instance
             self.type_and_format_pairs.append((type_instance, format_str))
 

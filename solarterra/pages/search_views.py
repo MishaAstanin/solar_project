@@ -18,6 +18,13 @@ The corresponding value in unixtime shall be named as tu_start.
 def select_missions(request):
     if request.method == "POST":
         form = MissionSelectForm(request.POST)
+        if form.is_valid():
+            request.session["selected_missions"] = form.cleaned_data["missions"]
+            return redirect("select_variables")
+    else:
+        form = MissionSelectForm()
+
+    return render(request, "pages/mission_select.html", context={"form": form})
 
 
 def select_variables(request):
