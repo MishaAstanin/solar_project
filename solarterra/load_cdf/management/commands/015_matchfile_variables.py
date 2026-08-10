@@ -77,7 +77,14 @@ class Command(UploadRequired, BaseCommand):
 
                 for v_attr_name, value in zip(v_attr_names, values):
                     var_field = resolve_db_field_name(var_field_base, v_attr_name)
-                    
+
+                    # fall back to base name if the resolved field isn't a real model field;
+                    # if the name is wrong it writes to a transient non-model python class field, and it vanishes silently without going to DB
+                    try:
+                        var_instance.__class__._meta.get_field(var_field)
+                    except Exception:
+                        var_field = var_field_base
+
                     # set attribute value
                     try:
                         setattr(var_instance, var_field, value)
