@@ -1,6 +1,6 @@
 from load_cdf.models import *
-from solarterra.utils import ts_bigint_resolver as ti
-from solarterra.utils import bigint_ts_resolver as it
+from solarterra.utils import ts_float_resolver as tf
+from solarterra.utils import float_ts_resolver as ft
 from solarterra.utils import str_to_dt
 
 import math
@@ -19,8 +19,8 @@ class DBQuery():
         self.data_class = dataset.dynamic.resolve_class()
 
         # time strings
-        self.start_limit = ti(t_start)
-        self.stop_limit = ti(t_stop)
+        self.start_limit = tf(t_start)
+        self.stop_limit = tf(t_stop)
 
         # field (instance) on which the filtering happens
         self.filter_field = filter_field
@@ -200,8 +200,8 @@ class Plot():
 
 
     def prepare_bins(self, bin_instance):
-        i_start = ti(self.t_start)
-        i_stop = ti(self.t_stop)
+        i_start = tf(self.t_start)
+        i_stop = tf(self.t_stop)
         self.bin_instance = bin_instance
         # *2 here because right limit in arange is non-inclusive, 
         # but a little data in the query could be left beyond last bin, since bin size is rounded
@@ -253,7 +253,7 @@ class Plot():
 
 
     def get_x_array(self, query):
-        self.x_field_array = np.array(list(map(it, query.get_full_time_array())))
+        self.x_field_array = np.array(list(map(ft, query.get_full_time_array())))
 
     def get_y_arrays(self, query):
         for component_index in self.component_indexes:
@@ -270,7 +270,7 @@ class Plot():
         # chose the second option
 
     def get_agg_x_array(self):
-        self.x_field_array = np.array(list(map(it, self.bin_centers_array)))
+        self.x_field_array = np.array(list(map(ft, self.bin_centers_array)))
 
     # definitely could reduce # of steps here
     def get_agg_y_arrays(self, query):
@@ -384,8 +384,8 @@ class SpectrogramPlot():
         if data_field is None:
             return
 
-        i_start = ti(self.t_start)
-        i_stop = ti(self.t_stop)
+        i_start = tf(self.t_start)
+        i_stop = tf(self.t_stop)
 
         qs = data_class.objects.filter(**{
             f'{filter_field}__gte': i_start,
@@ -412,7 +412,7 @@ class SpectrogramPlot():
             time_array, z_matrix = self._aggregate(time_array, z_matrix)
             self.aggregation = True
 
-        self.x_axis = np.array(list(map(it, time_array)))
+        self.x_axis = np.array(list(map(ft, time_array)))
         self.z_matrix = z_matrix
 
         # energies from depend_1

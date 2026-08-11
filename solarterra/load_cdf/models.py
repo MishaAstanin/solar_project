@@ -8,8 +8,8 @@ from solarterra.utils import NOW
 import os
 import numpy as np
 from django.core import management
-from solarterra.utils import bigint_ts_resolver as it
-from solarterra.utils import ts_bigint_resolver as tbr
+from solarterra.utils import float_ts_resolver as ft
+from solarterra.utils import ts_float_resolver as tf
 
 
 #------ float32 tryout------------#
@@ -265,7 +265,7 @@ class Dataset(models.Model):
                 return None
 
             value = arr[0] if from_start else arr[-1]
-            return tbr(value)
+            return tf(value)
         finally:
             cdf_obj.close()
 
@@ -317,8 +317,8 @@ class Dataset(models.Model):
         if self.time_start is None or self.time_end is None:
             return (None, None)
 
-        min_time = it(self.time_start)
-        max_time = it(self.time_end)
+        min_time = ft(self.time_start)
+        max_time = ft(self.time_end)
 
         epoch_variable = self._get_epoch_variable()
         if epoch_variable is None:
@@ -675,7 +675,7 @@ class DynamicField(models.Model):
 
         if type_instance.is_epoch():
             #nb: the current uploader is ommiting milliseconds completely (it rounds the timestamps to seconds)
-            return lambda x: it(x).strftime("%Y-%m-%d %H:%M:%S") + f".{it(x).microsecond // 1000:03d}" if not is_missing(x) else "NaN"
+            return lambda x: ft(x).strftime("%Y-%m-%d %H:%M:%S") + f".{ft(x).microsecond // 1000:03d}" if not is_missing(x) else "NaN"
         elif format_str is not None and "i" in format_str.lower():
             #it is usually for year/day/etc, doesn't really need to be zero-padded; added as a place to add different behavior for int types if needed
             return lambda x: str(int(x)) if not is_missing(x) else "NaN"
@@ -728,6 +728,7 @@ class DataType(models.Model):
     def proper_type(cls, value_str, proper_value):
         # separate datetime case
         if isinstance(proper_value, datetime.datetime):
+            #FIXME: probably obolete after introducing milliseconds
             template = "%d-%b-%Y %H:%M:%S.%f"
             try:
                 dat = datetime.datetime.strptime(value_str, template)

@@ -2,8 +2,8 @@
 from pages.export_instances import Bin, DataHandler, PlainTextMeta
 
 from load_cdf.models import DataType
-from solarterra.utils import bigint_ts_resolver as it
-from solarterra.utils import ts_bigint_resolver as ti
+from solarterra.utils import float_ts_resolver as ft
+from solarterra.utils import ts_float_resolver as tf
 from django.http import HttpResponse, StreamingHttpResponse
 import numpy as np
 import datetime as dt
@@ -132,8 +132,8 @@ def single_file_export(dataset, var_group, ts_start, ts_end, aggregate, validate
                 rows = None
                 file_dt_str = dt_str
             else:
-                actual_start = it(int(data.agg_data_by_var[0][0]))
-                actual_end = it(int(data.agg_data_by_var[0][-1]))
+                actual_start = ft(int(data.agg_data_by_var[0][0]))
+                actual_end = ft(int(data.agg_data_by_var[0][-1]))
                 file_dt_str = actual_start.strftime('%Y%m%d%H%M') + '_' + actual_end.strftime('%Y%m%d%H%M')
                 rows = data.agg_data_by_record
         else:
@@ -204,8 +204,8 @@ def multi_file_export(variables, var_groups, ts_start, ts_end, aggregate, valida
                         rows = None
                         file_dt_str = dt_str
                     else:
-                        actual_start = it(int(data.agg_data_by_var[0][0]))
-                        actual_end = it(int(data.agg_data_by_var[0][-1]))
+                        actual_start = ft(int(data.agg_data_by_var[0][0]))
+                        actual_end = ft(int(data.agg_data_by_var[0][-1]))
                         file_dt_str = actual_start.strftime('%Y%m%d%H%M') + '_' + actual_end.strftime('%Y%m%d%H%M')
                         rows = data.agg_data_by_record
                 else:

@@ -1,7 +1,7 @@
 #lib import
 from load_cdf.models import *
-from solarterra.utils import ts_bigint_resolver as ti
-from solarterra.utils import bigint_ts_resolver as it
+from solarterra.utils import ts_float_resolver as tf
+from solarterra.utils import float_ts_resolver as ft
 import math
 import datetime as dt
 import numpy as np
@@ -48,8 +48,8 @@ class DataHandler():
 
         #building lazy query
         kwargs = {
-            "{0}__gte".format(self.filter_field): ti(self.ts_start),
-            "{0}__lt".format(self.filter_field): ti(self.ts_stop),
+            "{0}__gte".format(self.filter_field): tf(self.ts_start),
+            "{0}__lt".format(self.filter_field): tf(self.ts_stop),
         }
         self.queryset = self.data_class.objects.filter(**kwargs)
 
@@ -169,8 +169,8 @@ class DataHandler():
 
         # Bin edges for [start, stop] with one extra edge for right-open intervals.
         bin_edges_array = np.arange(
-            ti(ts_start),
-            ti(ts_stop) + (self.bin_instance.bin_seconds),
+            tf(ts_start),
+            tf(ts_stop) + (self.bin_instance.bin_seconds),
             step=self.bin_instance.bin_seconds,
         )
         #getting rid of bins that doesn't have any epoch in them, to avoid having a lot of empty bins in case of sparse data
@@ -226,7 +226,7 @@ class DataHandler():
         agg_data_by_var = np.stack(agg_data_by_var, axis=0)
 
         #crudely throwing away the last bin, not to confuse user of why it sticks out
-        if self.bin_centers_array[-1] > ti(self.ts_stop):
+        if self.bin_centers_array[-1] > tf(self.ts_stop):
             agg_data_by_var = agg_data_by_var[:, :-1]
 
         self.agg_data_by_var = agg_data_by_var
@@ -269,9 +269,11 @@ class Bin():
     def __init__(self, ts_start, ts_stop):
 
         timedelta = ts_stop - ts_start 
-        self.bin_seconds = math.ceil(timedelta.total_seconds() / self.PPP)
+        #self.bin_seconds = math.ceil(timedelta.total_seconds() / self.PPP)
+        self.bin_seconds = timedelta.total_seconds() / self.PPP
         self.bin_td = dt.timedelta(seconds=self.bin_seconds)
-        self.half_bin = math.ceil(self.bin_seconds / 2)
+        #self.half_bin = math.ceil(self.bin_seconds / 2)
+        self.half_bin = self.bin_seconds / 2
 
     def t_next(self, t_current):
         #print(f"in t_next : {t_current}, {t_current + self.bin_td}")

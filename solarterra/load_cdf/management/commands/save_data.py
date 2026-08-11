@@ -4,7 +4,7 @@ from spacepy import pycdf
 from load_cdf.models import *
 from load_cdf.utils import *
 from data_cdf.models import *
-from solarterra.utils import ts_bigint_resolver as tbr
+from solarterra.utils import ts_float_resolver as tf
 import timeit
 import math
 import numpy as np
@@ -81,7 +81,7 @@ def save_single_file(cdf_file, fields, model_class, upload):
         
         # epoch parsing
         if field.data_type_instance.is_epoch():
-            arr_collection.append(map(tbr, arr))
+            arr_collection.append(map(tf, arr))
         # for ArrayField
         elif field.is_array_field:
             arr_collection.append([row.tolist() for row in arr])

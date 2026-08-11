@@ -24,7 +24,7 @@ TYPE_CONVERSION = {
 
     'CDF_CHAR': 'models.TextField',
     'CDF_UCHAR': 'models.TextField',
-    'CDF_EPOCH': 'models.BigIntegerField',
+    'CDF_EPOCH': 'models.FloatField',
     'CDF_TIME_TT2000': 'models.BigIntegerField',
 }
 
@@ -45,7 +45,7 @@ TYPE_NUMPY = {
 
     #'CDF_CHAR': 'models.TextField',
     #'CDF_UCHAR': 'models.TextField',
-    'CDF_EPOCH': 'object',
+    'CDF_EPOCH': 'float64',
     'CDF_TIME_TT2000': 'object',
 }
 
