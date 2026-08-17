@@ -1,5 +1,5 @@
 #lib import
-from pages.export_instances import Bin, DataHandler, PlainTextMeta
+from export.export_instances import Bin, DataHandler, PlainTextMeta
 
 from load_cdf.models import DataType
 from solarterra.utils import float_ts_resolver as ft
@@ -236,3 +236,7 @@ def multi_file_export(variables, var_groups, ts_start, ts_end, aggregate, valida
     response["Content-Disposition"] = f'attachment; filename="{zip_filename}"'
     response["Content-Length"] = len(zip_bytes)
     return response
+
+    def determine_export_mode():
+        # single file, multifile zipped or a linklist to multiple zipped files, if i am implementing this one
+        pass

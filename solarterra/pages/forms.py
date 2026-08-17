@@ -122,20 +122,3 @@ class VariableSelectForm(forms.Form):
 class PlotForm(forms.Form):
     ''' A stub for placing plot parameters later '''
     pass
-                
-class ExportForm(forms.Form):
-    EXPORT_FORMAT_CHOICES = (
-        ("plain_text", "Plain Text"),
-        ("original_cdf", "Original CDF"),
-        ("clean_cdf", "Clean CDF"),
-    )
-
-    export_format = forms.ChoiceField(
-        choices=EXPORT_FORMAT_CHOICES,
-        required=True
-    )
-    aggregate = forms.BooleanField(required=False, label="Агрегировать данные")
-    validate = forms.BooleanField(
-        label="Валидировать данные",
-        required=False
-    )
