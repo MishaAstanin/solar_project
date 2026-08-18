@@ -101,7 +101,6 @@ class Bin():
         return t_current - self.bin_td
 
 
-
 class Plot():
 
     # start and stop as datetimes

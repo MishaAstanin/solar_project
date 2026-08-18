@@ -435,6 +435,14 @@ class Variable(models.Model):
             if depend_var is not None and depend_var.dynamic.count() == 1:
                 return depend_var.dynamic.first()
 
+    def get_depend_var(self):
+        if self.depend_0 is not None:
+            depend_var = self.dataset.variables.get(name=self.depend_0)
+            return depend_var
+
+    def get_data_type_instance(self):
+        return DataType.objects.get(cdf_file_label=self.datatype)
+
     def get_numpy_data_type(self):
         field_instance = self.dynamic.first()
         if field_instance is not None:
@@ -442,7 +450,7 @@ class Variable(models.Model):
                 return field_instance.data_type_instance.numpy_type
 
     def get_list_of_fields(self):
-        return list(self.dynamic.order_by('multipart_index').values_list('field_name', flat=True))
+        return list(self.dynamic.values_list('field_name', flat=True))
     
     def ordered_attributes(self):
         return self.attributes.order_by('title')
@@ -644,33 +652,41 @@ class DynamicField(models.Model):
     def set_format_function(self):
         '''Correct usage for a single record of multipart field: formatted_list = [f(val) for f,val in zip(field.format_function, field_values)]
         Or can be called like field.format_function[0](val_0)'''
+        #TODO: make a wrapper function that takes a list of values and returns a list of formatted values, so that the user doesn't have to deal with the list of functions
         
         format_str = self.get_format_str()
         if isinstance(format_str, list): 
             self.format_function = [self.make_format_function(self.data_type_instance, fs) for fs in format_str]
         else:
-            self.format_function = self.make_format_function(self.data_type_instance, format_string)
+            self.format_function = self.make_format_function(self.data_type_instance, format_str)
 
-        return format_function
+        return self.format_function
 
     @staticmethod
     def make_format_function(type_instance, format_str):
         '''Factory for field-specific formatter functions. X should be passed in proper python type.'''
 
+        def is_missing(x):
+            if x is None:
+                return True
+            if isinstance(x, (float, np.floating)):
+                return bool(np.isnan(x))
+            return False
+
         if type_instance.is_epoch():
             #nb: the current uploader is ommiting milliseconds completely (it rounds the timestamps to seconds)
-            return lambda x: it(x).strftime("%Y-%m-%d %H:%M:%S") + f"-{it(x).microsecond // 1000:03d}" if (x is not None and x is not np.nan) else "NaN"
+            return lambda x: it(x).strftime("%Y-%m-%d %H:%M:%S") + f".{it(x).microsecond // 1000:03d}" if not is_missing(x) else "NaN"
         elif format_str is not None and "i" in format_str.lower():
             #it is usually for year/day/etc, doesn't really need to be zero-padded; added as a place to add different behavior for int types if needed
-            return lambda x: str(int(x)) if (x is not None and x is not np.nan) else "NaN"
+            return lambda x: str(int(x)) if not is_missing(x) else "NaN"
         elif format_str is not None and "f" in format_str.lower():
-            return lambda x: f"{x:{format_str.lower().strip('f')}f}" if (x is not None and x is not np.nan) else "NaN"
+            return lambda x: f"{x:{format_str.lower().strip('f')}f}" if not is_missing(x) else "NaN"
         elif format_str is not None and "e" in format_str.lower():
             #scientific float formatter
-            return lambda x: f"{x:{format_str.lower().strip('e')}e}" if (x is not None and x is not np.nan) else "NaN"
+            return lambda x: f"{x:{format_str.lower().strip('e')}e}" if not is_missing(x) else "NaN"
         else:
             #fallback
-            return lambda x: str(x) if (x is not None and x is not np.nan) else "NaN"
+            return lambda x: str(x) if not is_missing(x) else "NaN"
 
     # def get_time_field(self):
     #     time_var = self.variable_instance.dataset.variables.filter(
