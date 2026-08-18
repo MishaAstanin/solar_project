@@ -119,6 +119,10 @@ class CDFFileStored(models.Model):
     loaded = models.BooleanField(default=False)
     saved_rows = models.IntegerField(default=0)
 
+    #timebounds for the data (min and max epoch, including all the time variables in the file)
+    tu_start = Float32Field(blank=True, null=True)
+    tu_end = Float32Field(blank=True, null=True)
+
     objects = GetManager()
 
     def __str__(self):

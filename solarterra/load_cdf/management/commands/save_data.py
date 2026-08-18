@@ -17,6 +17,8 @@ def save_single_file(cdf_file, fields, model_class, upload):
     cdf_obj = pycdf.CDF(cdf_file.full_path)
     arr_collection = []
     field_labels = []
+    max_epoch = None
+    min_epoch = None
     
     # numpy array work only
     for field in fields:
@@ -79,9 +81,14 @@ def save_single_file(cdf_file, fields, model_class, upload):
             if nan_count > 0:
                 make_log_entry(f"{nan_count} invalid values in '{field.field_name}' file '{cdf_file.full_path}'")
         
+        
         # epoch parsing
         if field.data_type_instance.is_epoch():
             arr_collection.append(map(tf, arr))
+            #ANCHOR: min and max epoch for the file; on test
+            min_epoch = tf(arr[0]) if min_epoch is None else min(min_epoch, tf(arr[0]))
+            max_epoch = tf(arr[-1]) if max_epoch is None else max(max_epoch, tf(arr[-1]))
+            
         # for ArrayField
         elif field.is_array_field:
             arr_collection.append([row.tolist() for row in arr])
@@ -105,7 +112,7 @@ def save_single_file(cdf_file, fields, model_class, upload):
     
     
     model_class.objects.bulk_create(instances)
-    cdf_file.update(loaded=True, saved_rows=len(instances)) 
+    cdf_file.update(loaded=True, saved_rows=len(instances),tu_start=min_epoch, tu_end=max_epoch)
     print(len(instances)) 
     del arr_collection
     del zipped_collection

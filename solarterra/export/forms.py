@@ -5,7 +5,7 @@ from django import forms
 class ExportForm(forms.Form):
     EXPORT_FORMAT_CHOICES = (
         ("plain_text", "Plain Text"),
-        ("original_cdf", "Original CDF"),
+        ("raw_cdf", "Original CDF"),
         ("clean_cdf", "Clean CDF"),
     )
 
