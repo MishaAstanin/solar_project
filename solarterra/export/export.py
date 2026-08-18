@@ -1,10 +1,12 @@
 #lib import
-from pages.export_instances import Bin, DataHandler, PlainTextMeta
+from export.export_instances import Bin, DataHandler, PlainTextMeta
 
 from load_cdf.models import DataType
-from solarterra.utils import bigint_ts_resolver as it
-from solarterra.utils import ts_bigint_resolver as ti
+from load_cdf.models import CDFFileStored, Variable, Dataset, Upload
+from solarterra.utils import float_ts_resolver as ft
+from solarterra.utils import ts_float_resolver as tf
 from django.http import HttpResponse, StreamingHttpResponse
+from django.db.models import Q
 import numpy as np
 import datetime as dt
 import tempfile, os, shutil
@@ -132,8 +134,8 @@ def single_file_export(dataset, var_group, ts_start, ts_end, aggregate, validate
                 rows = None
                 file_dt_str = dt_str
             else:
-                actual_start = it(int(data.agg_data_by_var[0][0]))
-                actual_end = it(int(data.agg_data_by_var[0][-1]))
+                actual_start = ft(int(data.agg_data_by_var[0][0]))
+                actual_end = ft(int(data.agg_data_by_var[0][-1]))
                 file_dt_str = actual_start.strftime('%Y%m%d%H%M') + '_' + actual_end.strftime('%Y%m%d%H%M')
                 rows = data.agg_data_by_record
         else:
@@ -204,8 +206,8 @@ def multi_file_export(variables, var_groups, ts_start, ts_end, aggregate, valida
                         rows = None
                         file_dt_str = dt_str
                     else:
-                        actual_start = it(int(data.agg_data_by_var[0][0]))
-                        actual_end = it(int(data.agg_data_by_var[0][-1]))
+                        actual_start = ft(int(data.agg_data_by_var[0][0]))
+                        actual_end = ft(int(data.agg_data_by_var[0][-1]))
                         file_dt_str = actual_start.strftime('%Y%m%d%H%M') + '_' + actual_end.strftime('%Y%m%d%H%M')
                         rows = data.agg_data_by_record
                 else:
@@ -236,3 +238,37 @@ def multi_file_export(variables, var_groups, ts_start, ts_end, aggregate, valida
     response["Content-Disposition"] = f'attachment; filename="{zip_filename}"'
     response["Content-Length"] = len(zip_bytes)
     return response
+
+def export_dispatcher(request):
+    '''
+    Main entry point for export requests.
+    Determines the export mode based on the request parameters and calls the appropriate function.
+    '''
+    # Extract parameters from request (e.g., dataset, variables, time range, aggregate, validate)
+    # Determine if single file or multi-file export is needed
+    # Call single_file_export or multi_file_export accordingly
+    pass
+
+def raw_cdf_export(selected_missions, variables, ts_start, ts_end):
+    '''
+    Export raw CDF files for the requested models and time range.
+    '''
+    # Extract parameters from request (e.g., dataset, variables, time range)
+    #TODO: CRUDE AF, raw_cdf shall have it's own ui endpoint
+    valid_datasets = set(var.dataset for var in variables)
+    upload_instances = Upload.objects.filter(dataset__in=valid_datasets)
+
+    tu_start = tf(ts_start)
+    tu_end = tf(ts_end)
+
+    # Filter the CDF file(s) and stream them back as a response (currently as a console list of filenames)
+    qs = CDFFileStored.objects.filter(upload__in=upload_instances).filter(
+        Q(tu_start__gte=tu_start, tu_start__lte=tu_end)
+        | Q(tu_end__gte=tu_start, tu_end__lte=tu_end)
+        | Q(tu_start__lte=tu_start, tu_end__gte=tu_end)
+    ).order_by('upload','tu_start')
+    
+    for cdf_file in qs:
+        print(f"Found CDF file: {cdf_file.full_path} (start: {cdf_file.tu_start}, end: {cdf_file.tu_end})")
+
+    #ANCHOR - TODO: Implement actual streaming of CDF files back to the client, possibly as a zip archive if multiple files are found.
