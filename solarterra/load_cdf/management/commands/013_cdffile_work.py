@@ -48,10 +48,11 @@ class Command(UploadRequired, BaseCommand):
 
 
         if upload.dataset_created:
-            for var in cdf_obj.keys():
+            for order_index, var in enumerate(cdf_obj.keys()):
                 upload.var_list.append(Variable(
                     name=var,
-                    dataset=dataset
+                    dataset=dataset,
+                    cdf_order=order_index
                 ))
                 for attr_title, attr_value in cdf_obj[var].attrs.items():
                     upload.var_attr_list.append(VariableAttribute(

@@ -14,7 +14,18 @@ MINOR_TICK_WIDTH = 2
 GRID_WIDTH = 2
 GRID_COLOR = "rgba(0, 0, 0, 0.15)"
 FONT_SIZE = 14
-Y_TITLE_XSHIFT = -(PLOT_MARGIN["l"] - 10)
+Y_TITLE_XSHIFT = -(PLOT_MARGIN["l"] - 14)
+
+
+def wrap_axis_label(text, max_len=25):
+    if not text or len(text) <= max_len:
+        return text
+
+    if "," in text:
+        head, _, tail = text.rpartition(",")
+        return f"{head},<br>{tail.strip()}"
+
+    return text
 
 
 def add_fixed_y_title(fig, text, y=0.5):
@@ -24,7 +35,7 @@ def add_fixed_y_title(fig, text, y=0.5):
         x=0,
         y=y,
         xshift=Y_TITLE_XSHIFT,
-        text=text,
+        text=wrap_axis_label(text),
         showarrow=False,
         textangle=-90,
         font=dict(

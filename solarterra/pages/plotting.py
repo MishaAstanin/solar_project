@@ -87,8 +87,7 @@ def get_plots(variables, t_start, t_end, validate):
         
     plots.sort(key=lambda p: (
         p.variable.dataset.tag.lower(),
-        p.variable.depend_0 or '',
-        p.variable.name.lower()
+        p.variable.cdf_order
     ))
 
     return plots
