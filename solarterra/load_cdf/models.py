@@ -643,8 +643,9 @@ class DynamicField(models.Model):
         var = self.variable_instance
         format_str = None
         if var.output_format is not None:
-            if var.dims == 0:
-                format_str = var.output_format
+            # (dims = 0, dim_sizes = null) == (dims = 1, dim_sizes = 1): both are scalar fields
+            if var.dims == 0 or (var.dims == 1 and var.dim_sizes == 1):
+                format_str = var.output_format[0] if isinstance(var.output_format, list) else var.output_format
             elif var.dims == 1:
                 #it can be a single value or a list already, make it a list always
                 if isinstance(var.output_format, list):
