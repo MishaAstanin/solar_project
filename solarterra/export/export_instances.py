@@ -503,7 +503,7 @@ class PlainTextMeta():
         from solarterra.utils import NOW
         yield f"# End of data in the chosen interval for the dataset: {self.dataset.tag}.\n# File generated at {NOW()}\n"
         if self.info['validate']:
-            yield f'# Data is validated to be in min\max bounds.\n'
+            yield f'# Data is validated to be in min/max bounds.\n'
             #TODO: add counter for nulled data for each var
             # yield f"Nulled {self.info['validation_removed_count']}" or some for-loop over every var or add tuple to "unvalid_counters", yes that
         else:

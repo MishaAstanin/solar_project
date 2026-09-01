@@ -64,8 +64,6 @@ INSTALLED_APPS = [
     'data_cdf',
     'pages',
     'export',
-    'api',
-    'rest_framework',
 ]
 
 MIDDLEWARE = [
