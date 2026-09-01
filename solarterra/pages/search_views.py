@@ -3,11 +3,13 @@ from load_cdf.models import *
 from data_cdf.models import *
 from django.http import HttpResponse
 from django.apps import apps
-from pages.forms import MissionSelectForm, VariableSelectForm, PlotForm, ExportForm
+from pages.forms import MissionSelectForm, VariableSelectForm, PlotForm
+from export.forms import ExportForm
+from export.export import single_file_export, multi_file_export
 import datetime as dt
 
 from pages.plotting import get_plots
-from pages.export import single_file_export, multi_file_export
+from export.export import single_file_export, multi_file_export
 
 '''
 NB: for convinience ts_start is always in timestamp format. 
@@ -209,6 +211,12 @@ def export_clicked(request):
             f"ts_start={ts_start}, ts_end={ts_end}, aggregate: {aggregate}, validate: {validate}"
         )
 
+        # #ANCHOR a testing intervention for raw_cdf
+        # if export_format == "raw_cdf":
+        #     from export.export import raw_cdf_export
+        #     raw_cdf_export(selected_missions, variables, ts_start, ts_end)
+        #     return HttpResponse("Raw CDF export completed. Check the console for details.", status=200)
+
         if export_format != "plain_text": return HttpResponse("Only plain_text is implemented for now", status=501)
 
         #quiery containing a single var from a distinct group filtered by dataset tag and depend_0
@@ -233,7 +241,6 @@ def export_clicked(request):
     else:
 
         context = {
-            'datasets': datasets,
             'var_form': var_form,
             'plot_form': plot_form,
             'export_form': export_form,

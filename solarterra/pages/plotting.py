@@ -1,6 +1,6 @@
 
 from pages.figures import scatter, n_trace
-from solarterra.utils import bigint_ts_resolver as its
+from solarterra.utils import float_ts_resolver as ft
 
 import pandas as pd
 import numpy as np

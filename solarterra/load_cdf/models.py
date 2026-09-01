@@ -8,8 +8,8 @@ from solarterra.utils import NOW
 import os
 import numpy as np
 from django.core import management
-from solarterra.utils import bigint_ts_resolver as it
-from solarterra.utils import ts_bigint_resolver as tbr
+from solarterra.utils import float_ts_resolver as ft
+from solarterra.utils import ts_float_resolver as tf
 
 
 #------ float32 tryout------------#
@@ -118,6 +118,10 @@ class CDFFileStored(models.Model):
 
     loaded = models.BooleanField(default=False)
     saved_rows = models.IntegerField(default=0)
+
+    #timebounds for the data (min and max epoch, including all the time variables in the file)
+    tu_start = Float32Field(blank=True, null=True)
+    tu_end = Float32Field(blank=True, null=True)
 
     objects = GetManager()
 
@@ -265,7 +269,7 @@ class Dataset(models.Model):
                 return None
 
             value = arr[0] if from_start else arr[-1]
-            return tbr(value)
+            return tf(value)
         finally:
             cdf_obj.close()
 
@@ -317,8 +321,8 @@ class Dataset(models.Model):
         if self.time_start is None or self.time_end is None:
             return (None, None)
 
-        min_time = it(self.time_start)
-        max_time = it(self.time_end)
+        min_time = ft(self.time_start)
+        max_time = ft(self.time_end)
 
         epoch_variable = self._get_epoch_variable()
         if epoch_variable is None:
@@ -641,8 +645,9 @@ class DynamicField(models.Model):
         var = self.variable_instance
         format_str = None
         if var.output_format is not None:
-            if var.dims == 0:
-                format_str = var.output_format
+            # (dims = 0, dim_sizes = null) == (dims = 1, dim_sizes = 1): both are scalar fields
+            if var.dims == 0 or (var.dims == 1 and var.dim_sizes == 1):
+                format_str = var.output_format[0] if isinstance(var.output_format, list) else var.output_format
             elif var.dims == 1:
                 #it can be a single value or a list already, make it a list always
                 if isinstance(var.output_format, list):
@@ -677,7 +682,7 @@ class DynamicField(models.Model):
 
         if type_instance.is_epoch():
             #nb: the current uploader is ommiting milliseconds completely (it rounds the timestamps to seconds)
-            return lambda x: it(x).strftime("%Y-%m-%d %H:%M:%S") + f".{it(x).microsecond // 1000:03d}" if not is_missing(x) else "NaN"
+            return lambda x: ft(x).strftime("%Y-%m-%d %H:%M:%S") + f".{ft(x).microsecond // 1000:03d}" if not is_missing(x) else "NaN"
         elif format_str is not None and "i" in format_str.lower():
             #it is usually for year/day/etc, doesn't really need to be zero-padded; added as a place to add different behavior for int types if needed
             return lambda x: str(int(x)) if not is_missing(x) else "NaN"
@@ -730,6 +735,7 @@ class DataType(models.Model):
     def proper_type(cls, value_str, proper_value):
         # separate datetime case
         if isinstance(proper_value, datetime.datetime):
+            #FIXME: probably obolete after introducing milliseconds
             template = "%d-%b-%Y %H:%M:%S.%f"
             try:
                 dat = datetime.datetime.strptime(value_str, template)

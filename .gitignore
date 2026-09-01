@@ -6,6 +6,9 @@ solarterra_submodules/data_cdf/migrations/*.py
 solarterra_submodules/data_cdf/models/*.py
 !solarterra_submodules/data_cdf/models/__init__.py
 
+solarterra/load_cdf/migrations/*.py
+!solarterra/load_cdf/migrations/__init__.py
+
 main.py
 
 __pycache__/
