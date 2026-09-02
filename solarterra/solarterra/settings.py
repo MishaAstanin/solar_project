@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'data_cdf',
     'pages',
     'export',
+    'healthcheck',
 ]
 
 MIDDLEWARE = [
