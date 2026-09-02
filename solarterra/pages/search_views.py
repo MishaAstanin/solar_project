@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect
 from load_cdf.models import *
 from data_cdf.models import *
 from django.http import HttpResponse
-from django.apps import apps
 from pages.forms import MissionSelectForm, VariableSelectForm, PlotForm
 from export.forms import ExportForm
 from export.export import single_file_export, multi_file_export

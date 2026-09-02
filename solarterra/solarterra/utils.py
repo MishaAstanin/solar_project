@@ -19,13 +19,11 @@ def ts_float_resolver(ts):
         ts = ts.replace(tzinfo=UTC)
     return float(ts.timestamp())
 
-# translates number into the datetime instance
 def float_ts_resolver(num):
     return dt.datetime.fromtimestamp(num, UTC)
 
-#alias for float_ts_resolver after refactoring, deprecated
-# def bigint_ts_resolver(num):
-#     return float_ts_resolver(num)
+def bigint_ts_resolver(num):
+    return dt.datetime.fromtimestamp(num, UTC)
 
 #q: any need to fix the pattern to include ms if provided? will it match to the dt if ms in not present in timestamp string?
 #a: strptime requires exact format match. If ms are provided in the string but not in template, it will fail. Use optional ms pattern "%Y-%m-%d %H:%M:%S.%f" or handle with try/except for both formats.

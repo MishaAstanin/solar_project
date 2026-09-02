@@ -9,6 +9,7 @@ import os
 import numpy as np
 from django.core import management
 from solarterra.utils import float_ts_resolver as ft
+from solarterra.utils import bigint_ts_resolver as bt
 from solarterra.utils import ts_float_resolver as tf
 
 
@@ -313,16 +314,16 @@ class Dataset(models.Model):
             if end is not None:
                 break
 
-        self.time_start = start
-        self.time_end = end
+        self.time_start = int(start)
+        self.time_end = int(end)
         self.save(update_fields=['time_start', 'time_end'])
     
     def get_time_range(self):
         if self.time_start is None or self.time_end is None:
             return (None, None)
 
-        min_time = ft(self.time_start)
-        max_time = ft(self.time_end)
+        min_time = bt(self.time_start)
+        max_time = bt(self.time_end)
 
         epoch_variable = self._get_epoch_variable()
         if epoch_variable is None:
@@ -735,7 +736,6 @@ class DataType(models.Model):
     def proper_type(cls, value_str, proper_value):
         # separate datetime case
         if isinstance(proper_value, datetime.datetime):
-            #FIXME: probably obolete after introducing milliseconds
             template = "%d-%b-%Y %H:%M:%S.%f"
             try:
                 dat = datetime.datetime.strptime(value_str, template)
@@ -800,4 +800,3 @@ def make_log_entry(message, code=None, upload=None, color=None):
 
     if upload is not None:
         to_db(upload, code, message)
-

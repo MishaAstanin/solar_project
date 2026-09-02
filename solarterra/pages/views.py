@@ -2,9 +2,6 @@ from django.shortcuts import render
 from load_cdf.models import * 
 from data_cdf.models import *
 from django.http import Http404
-from django.apps import apps
-from solarterra.utils import float_ts_resolver
-from django.db.models import Max, Min
 from django.conf import settings
 from django.db import connection
 
@@ -25,7 +22,6 @@ def system_data(request):
         'path': settings.BASE_DIR,
         'hashsum': '',
         'db_version': row[0],
-
     }
 
     return render(request, template, context)

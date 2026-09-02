@@ -1,11 +1,4 @@
 
-from pages.figures import scatter, n_trace
-from solarterra.utils import float_ts_resolver as ft
-
-import pandas as pd
-import numpy as np
-import datetime as dt
-import math
 from pages.plot_instances import Bin, DBQuery, Plot, SpectrogramPlot
 from load_cdf.models import DynamicField
 
@@ -23,7 +16,6 @@ def get_plots(variables, t_start, t_end, validate):
 
     for item in ts_variables.order_by('dataset__tag').distinct('dataset__tag', 'depend_0'):
 
-        #print(item.dataset, item.depend_0)
         vars_in_query = ts_variables.filter(dataset=item.dataset, depend_0=item.depend_0).order_by('name')
 
         if item.depend_0 is None:

@@ -1,15 +1,18 @@
+import math
+import timeit
+from itertools import zip_longest
+
+import numpy as np
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from spacepy import pycdf
+
+from data_cdf.models import *
 from load_cdf.models import *
 from load_cdf.utils import *
-from data_cdf.models import *
 from solarterra.utils import ts_float_resolver as tf
-import timeit
-import math
-import numpy as np
-from .evaluate_extras import command_logger, UploadRequired
-from itertools import zip_longest
+
+from .evaluate_extras import UploadRequired, command_logger
 
 
 def save_single_file(cdf_file, fields, model_class, upload):
@@ -55,13 +58,11 @@ def save_single_file(cdf_file, fields, model_class, upload):
         # False will always propagate the other (significant) part of the OR operation
         condition = False
     
-        #print("var: ", var.name, "fillval: ", var.fillval, "arr type", type(arr[0]), "fi", arr[0])
         # variable fillvals can differ from standard ones for the type: 017 command checks that
         # also fillval can change on the file level: #TODO add cdf file FILL_VAL and PAD_VALUE parsing here
         if var.fillval is not None:
             fill_value = DataType.proper_type(var.fillval, arr.flat[0])
-            #print(f"FILL {fill_value}: {len(arr[arr==fill_value])} / {arr.shape}")
-            #print("added fillval condition", var.fillval, type(arr[0]), fill_value, type(fill_value))
+            
             if fill_value is None:
                 make_log_entry(f"Could not parse fillval: file '{cdf_file.full_path}' variable '{var.name}' datatype '{var.datatype}', numpy type '{arr.dtype}'", "ERROR")
                 exit(1)
@@ -112,13 +113,14 @@ def save_single_file(cdf_file, fields, model_class, upload):
     
     
     model_class.objects.bulk_create(instances)
-    cdf_file.update(loaded=True, saved_rows=len(instances),tu_start=min_epoch, tu_end=max_epoch)
+    cdf_file.update(loaded=True, saved_rows=len(instances), tu_start=min_epoch, tu_end=max_epoch)
     print(len(instances)) 
     del arr_collection
     del zipped_collection
     del instances
     
     cdf_obj.close()
+
 
 def delete_previous_file_data(cdf_file, model_class, upload):
     old_cdf_files = CDFFileStored.objects.filter(full_path=cdf_file.full_path).exclude(pk=cdf_file.pk)
@@ -144,7 +146,6 @@ class Command(UploadRequired, BaseCommand):
     help = "Command to load all data from the saved cdf files."
 
     requires_migrations_checks = True
-
 
     def add_arguments(self, parser):
         parser.add_argument("upload_tag", nargs=1, type=str)

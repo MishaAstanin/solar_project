@@ -1,7 +1,6 @@
 from load_cdf.models import *
 from solarterra.utils import ts_float_resolver as tf
 from solarterra.utils import float_ts_resolver as ft
-from solarterra.utils import str_to_dt
 
 import math
 import datetime as dt
