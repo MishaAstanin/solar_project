@@ -2,6 +2,10 @@ import time
 from datetime import datetime, timezone
 from django.test import Client
 from .base import BaseChecker, ComponentResult, Status
+import logging
+
+
+logger = logging.getLogger('solarterra.healthcheck.api')
 
 
 _SLOW_THRESHOLD_SEC = 10.0
@@ -43,7 +47,7 @@ class ApiChecker(BaseChecker):
         # GET - key
         for endpoint in self.KEY_GET:
             code, error, elapsed = self._probe_get(client, endpoint)
-            print(f"GET {endpoint}: {code}-{error}-{elapsed:.4f}s")
+            logger.info(f"GET {endpoint}: {code}-{error}-{elapsed:.4f}s")
             if code >= 500 or error:
                 reason = error if error else f"HTTP {code}"
                 key_errors.append(f"{endpoint} -> ({reason})")
@@ -51,7 +55,7 @@ class ApiChecker(BaseChecker):
         # GET - non-key
         for endpoint in self.NON_KEY_GET:
             code, error, elapsed = self._probe_get(client, endpoint)
-            print(f"GET {endpoint}: {code}-{error}-{elapsed:.4f}s")
+            logger.info(f"GET {endpoint}: {code}-{error}-{elapsed:.4f}s")
             if code >= 500 or error:
                 reason = error if error else f"HTTP {code}"
                 non_key_errors.append(f"{endpoint} -> ({reason})")
@@ -74,7 +78,7 @@ class ApiChecker(BaseChecker):
 
         for endpoint, name, data in post_scenarios:
             code, error, elapsed = self._probe_post(client, endpoint, data)
-            print(f"POST {endpoint} [{name}]: {code}-{error}-{elapsed:.4f}s")
+            logger.info(f"POST {endpoint} [{name}]: {code}-{error}-{elapsed:.4f}s")
 
             if code >= 500 or error:
                 reason = error if error else f"HTTP {code}"
@@ -115,6 +119,7 @@ class ApiChecker(BaseChecker):
             elapsed = time.monotonic() - start
             return response.status_code, None, elapsed
         except Exception as e:
+            logger.error(f"Probe GET failed: {endpoint}", exc_info=True)
             return 0, str(e), 0
 
     @staticmethod
@@ -127,6 +132,7 @@ class ApiChecker(BaseChecker):
             elapsed = time.monotonic() - start
             return response.status_code, None, elapsed
         except Exception as e:
+            logger.error(f"Probe POST failed: {endpoint}", exc_info=True)
             return 0, str(e), 0
 
     def _setup_session(self, client):
