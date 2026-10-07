@@ -8,6 +8,10 @@ import datetime as dt
 
 from pages.plotting import get_plots
 from export.dispatcher import export_dispatcher
+import logging
+
+
+logger = logging.getLogger('solarterra.plot')
 
 '''
 NB: for convinience ts_start is always in timestamp format. 
@@ -131,7 +135,7 @@ def plot_clicked(request):
         plots = get_plots(var_instances, ts_start, ts_stop, validate)
 
         for plot in plots:
-            print(
+            logger.info(
                 f"[invalid_values] dataset={plot.variable.dataset.tag}, "
                 f"variable={plot.variable.name}, "
                 f"invalid_values={plot.invalid_values}"
