@@ -3,6 +3,10 @@ from load_cdf.utils import get_dataset_tag, get_upload_tag
 from django.conf import settings
 from django.core import management
 from load_cdf.models import make_log_entry
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
 
 """
 This command accepts a single dataset represented with .zip file with data and .json file with metadata, \
@@ -32,6 +36,8 @@ class Command(BaseCommand):
         match_filename = options["match_filename"][0]
         upload_tag = get_upload_tag(zip_filename)
         dataset_tag = get_dataset_tag(zip_filename)
+
+        logger.info(f"starting evaluate: {zip_filename} - {match_filename}")
 
         management.call_command("010_validate_input",  zip_filename,  match_filename)
         management.call_command("011_create_managing_instances",  zip_filename,  match_filename)

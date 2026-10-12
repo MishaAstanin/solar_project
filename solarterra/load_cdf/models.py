@@ -804,7 +804,7 @@ def make_log_entry(message, code=None, upload=None, color=None):
                 message=message)
         log_entry.save()
 
-    with open(settings.LOG_FILE, mode="a") as f:
+    with open(settings.LOGS_UPLOAD_FILE, mode="a") as f:
         f.write(to_file(code, message))
 
     if upload is not None:

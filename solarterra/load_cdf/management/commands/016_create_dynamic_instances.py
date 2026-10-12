@@ -7,7 +7,7 @@ from .evaluate_extras import command_logger, UploadRequired
 import logging
 
 
-logger = logging.getLogger('solarterra.evaluate')
+logger = logging.getLogger('solarterra.upload')
 
 
 class Command(UploadRequired, BaseCommand):

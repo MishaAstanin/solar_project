@@ -3,7 +3,7 @@ from load_cdf.models import Upload, make_log_entry
 import logging
 
 
-logger = logging.getLogger('solarterra.evaluate')
+logger = logging.getLogger('solarterra.upload')
 
 
 # decorator to log command calls
@@ -21,8 +21,10 @@ def command_logger(func):
 
         logger.debug(f"UPLOAD {upload}")
         make_log_entry(f"In {func.__module__}:", "START", upload)
+        logger.info(f"start {func.__module__}")
         func(*args, **kwargs)
         make_log_entry(f"Completed {func.__module__}", "EXIT", upload)
+        logger.info(f"exit {func.__module__}")
     
     return wrapper
     

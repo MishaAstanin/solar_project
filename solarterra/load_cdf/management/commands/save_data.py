@@ -118,7 +118,7 @@ def save_single_file(cdf_file, fields, model_class, upload):
     
     model_class.objects.bulk_create(instances)
     cdf_file.update(loaded=True, saved_rows=len(instances), tu_start=min_epoch, tu_end=max_epoch)
-    logger.info(f"{len(instances)}") 
+    logger.debug(f"{len(instances)}") 
     del arr_collection
     del zipped_collection
     del instances

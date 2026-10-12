@@ -12,7 +12,5 @@
 		"DATA_ROOT" : "",
 		"MATCH_FILE_DIR" : "",
 		"UPLOAD_ZIP_DIR" : ""
-	},
-	"LOG_FILE" : "",
-    "COLLISIONS_LOG_DIR" : ""
+	}
 }

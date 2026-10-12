@@ -45,10 +45,6 @@ SECRET_KEY = config['S_K']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-LOG_FILE = config['LOG_FILE']
-
-COLLISIONS_LOG_DIR = config['COLLISIONS_LOG_DIR']
-
 ALLOWED_HOSTS = config['ALLOWED_HOSTS']
 
 # Application definition
@@ -173,6 +169,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 PROJECT_VERSION = 'v1.2'
 
+# Upload data logging
+
+LOGS_UPLOAD_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'logs_upload'))
+os.makedirs(LOGS_UPLOAD_DIR, exist_ok=True)
+
+LOGS_UPLOAD_FILE = os.path.join(LOGS_UPLOAD_DIR, 'upload.log')
+if not os.path.exists(LOGS_UPLOAD_FILE):
+    open(LOGS_UPLOAD_FILE, 'a', encoding='utf-8').close()
+
+LOGS_COLLISIONS_DIR = LOGS_UPLOAD_DIR
+
+
+# Django logging
 
 LOGS_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'logs'))
 os.makedirs(LOGS_DIR, exist_ok=True)

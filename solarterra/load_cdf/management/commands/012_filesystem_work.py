@@ -66,7 +66,7 @@ class Command(UploadRequired, BaseCommand):
                 new_files = [f for f in extracted_files if f not in existing_files]
 
                 if replaced_files:
-                    collision_logs_txt = os.path.join(settings.COLLISIONS_LOG_DIR, f"{upload.dataset.tag}_{upload.u_tag}_collisions.txt")
+                    collision_logs_txt = os.path.join(settings.LOGS_COLLISIONS_DIR, f"{upload.dataset.tag}_{upload.u_tag}_collisions.txt")
                     
                     with open(collision_logs_txt, 'w+') as f:
                         f.write("\n".join(replaced_files))
