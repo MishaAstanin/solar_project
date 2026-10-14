@@ -27,9 +27,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        make_log_entry(f"\nStarting {str(self)}")
-        make_log_entry(f"CURRENT UPLOAD_ZIP_DIR: {settings.UPLOAD_ZIP_DIR}")
-        make_log_entry(f"CURRENT MATCH_FILE_DIR: {settings.MATCH_FILE_DIR}")
+        make_log_entry(f"starting {str(self)}", "INFO")
+        make_log_entry(f"CURRENT UPLOAD_ZIP_DIR: {settings.UPLOAD_ZIP_DIR}", "INFO")
+        make_log_entry(f"CURRENT MATCH_FILE_DIR: {settings.MATCH_FILE_DIR}", "INFO")
     
     
         zip_filename = options["zip_filename"][0]
@@ -37,7 +37,7 @@ class Command(BaseCommand):
         upload_tag = get_upload_tag(zip_filename)
         dataset_tag = get_dataset_tag(zip_filename)
 
-        logger.info(f"starting evaluate: {zip_filename} - {match_filename}")
+        logger.info(f"starting upload: {zip_filename} - {match_filename}")
 
         management.call_command("010_validate_input",  zip_filename,  match_filename)
         management.call_command("011_create_managing_instances",  zip_filename,  match_filename)

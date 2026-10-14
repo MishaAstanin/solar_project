@@ -741,7 +741,7 @@ class DataType(models.Model):
                 dat = datetime.datetime.strptime(value_str, template)
                 return dat
             except Exception as e:
-                make_log_entry(f"Could not convert value str '{value_str}' to datetime using template '{template}'")
+                make_log_entry(f"could not convert value str '{value_str}' to datetime using template '{template}'", "WARNING")
                 return None
 
         else:
@@ -749,7 +749,7 @@ class DataType(models.Model):
                 return proper_value.__class__(value_str)
 
             except Exception as e:
-                make_log_entry(f"Could not convert value string '{value_str}' to '{proper_value.__class__}': {e}", "ERROR")
+                make_log_entry(f"could not convert value string '{value_str}' to '{proper_value.__class__}': {e}", "ERROR")
                 return None
 
 
@@ -790,9 +790,9 @@ class LogEntry(models.Model):
 def make_log_entry(message, code=None, upload=None, color=None):
 
     def to_file(code, message):
-        s = f"{NOW()}   "
+        s = f"{NOW().strftime('%Y-%m-%d %H:%M:%S')} "
         if code:
-            s += f"[{code}]   "
+            s += f"[{code}] "
         s += message
         return s + "\n"
 

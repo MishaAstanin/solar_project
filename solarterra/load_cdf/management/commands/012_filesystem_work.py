@@ -36,30 +36,30 @@ class Command(UploadRequired, BaseCommand):
         # Create a temporary directory to extract the zip
         with tempfile.TemporaryDirectory() as temp_dir:
             # Extract the zip file
-            make_log_entry(f"extracting files in temporary directory {temp_dir}", upload=upload)
+            make_log_entry(f"extracting files in temporary directory {temp_dir}", "INFO", upload=upload)
             with zipfile.ZipFile(upload.zip_path, 'r') as upzip:
                 upzip.extractall(temp_dir)
 
             # Get all CDF files from the extracted directory
             extracted_files = os.listdir(temp_dir)
-            make_log_entry(f"Extracted {len(extracted_files)} files", upload=upload)
+            make_log_entry(f"extracted {len(extracted_files)} files", "INFO", upload=upload)
 
             files_to_register = extracted_files
             new_files = extracted_files
             replaced_files = []
 
             if no_mv:
-                make_log_entry(f"FLAG --no-mv SET, NO SEARCH OF THE FILESYSTEM IS DONE!", upload=upload)
+                make_log_entry(f"FLAG --no-mv SET, NO SEARCH OF THE FILESYSTEM IS DONE", "INFO", upload=upload)
                 # the data_tree_created flag is SET TRUE NONETHELESS
                 upload.update(data_tree_created = True)
             else:   
                 if not os.path.exists(dataset_dir_path):
                     os.makedirs(dataset_dir_path)
                     upload.update(data_tree_created = True)
-                    make_log_entry(f"Created dataset directory: {dataset_dir_path}", "CREATED", upload=upload)
+                    make_log_entry(f"created dataset directory: {dataset_dir_path}", "CREATED", upload=upload)
                     existing_files = set()
                 else:
-                    make_log_entry(f"Dataset directory already exists: {dataset_dir_path}, proceeding to detect file collisions", "FOUND_EXISTING", upload=upload)
+                    make_log_entry(f"dataset directory already exists: {dataset_dir_path}, proceeding to detect file collisions", "INFO", upload=upload)
                     existing_files = set(os.listdir(dataset_dir_path))
                 
                 replaced_files = [f for f in extracted_files if f in existing_files]
@@ -90,30 +90,30 @@ class Command(UploadRequired, BaseCommand):
                             shrink_percent = round((1 - new_size / old_size) * 100, 2)
 
                             make_log_entry(
-                                f"Replacement file '{cdf_filename}' is significantly smaller than existing one: "
+                                f"replacement file '{cdf_filename}' is significantly smaller than existing one: "
                                 f"old_size={old_size} bytes, new_size={new_size} bytes, "
                                 f"decrease={shrink_percent}%",
                                 "WARNING",
                                 upload=upload
                             )
                 else:
-                    make_log_entry(f"No collisions found for dataset {upload.dataset.tag}.", "SUCCESS", upload=upload)
+                    make_log_entry(f"no collisions found for dataset {upload.dataset.tag}", "INFO", upload=upload)
 
             if no_mv:
-                make_log_entry(f"FLAG --no-mv SET, NO ACTUAL COPY OF THE FILES IS DONE!", upload=upload)
+                make_log_entry(f"FLAG --no-mv SET, NO ACTUAL COPY OF THE FILES IS DONE", "INFO", upload=upload)
             else:
                 if files_to_register:
                     make_log_entry(
-                        f"Copying {len(new_files)} new files and replacing {len(replaced_files)} existing files...", upload=upload)
+                        f"copying {len(new_files)} new files and replacing {len(replaced_files)} existing files", "INFO", upload=upload)
 
                     for cdf_filename in files_to_register:
                         src = os.path.join(temp_dir, cdf_filename)
                         dst = os.path.join(dataset_dir_path, cdf_filename)
                         shutil.copy2(src, dst)
 
-                    make_log_entry(f"Saved/replaced {len(files_to_register)} files in {dataset_dir_path}", "SUCCESS", upload=upload)
+                    make_log_entry(f"saved/replaced {len(files_to_register)} files in {dataset_dir_path}", "INFO", upload=upload)
                 else:
-                    make_log_entry("No files found in archive.", "INFO", upload=upload)
+                    make_log_entry("no files found in archive", "INFO", upload=upload)
 
             cdf_stored_instances = [CDFFileStored(
                 full_path=os.path.join(dataset_dir_path, cdf_filename),
@@ -122,6 +122,6 @@ class Command(UploadRequired, BaseCommand):
 
             if cdf_stored_instances:
                 CDFFileStored.objects.bulk_create(cdf_stored_instances)
-                make_log_entry(f"Saved {len(cdf_stored_instances)} instances of CDFFileStored", "CREATED", upload=upload)
+                make_log_entry(f"created {len(cdf_stored_instances)} instances of CDFFileStored", "CREATED", upload=upload)
             else:
-                make_log_entry(f"No CDFFileStored instances were created.", "INFO", upload=upload)
+                make_log_entry(f"no CDFFileStored instances were created", "INFO", upload=upload)

@@ -27,13 +27,13 @@ class Command(UploadRequired, BaseCommand):
         dataset = upload.dataset
 
         if hasattr(dataset, 'dynamic') and dataset.dynamic is not None:
-            make_log_entry("Dynamic model instance for the dataset is already found, skipping dynamic instances creation.", "FOUND", upload=upload)
+            make_log_entry("dynamic model instance for the dataset is already found, skipping dynamic instances creation", "INFO", upload=upload)
             return
 
         python_dataset_tag = to_python_identifier(dataset.tag)
 
         if python_dataset_tag != dataset.tag:
-            make_log_entry(f"Dataset tag '{dataset.tag}' normalized to python-safe name '{python_dataset_tag}'", "INFO", upload=upload)
+            make_log_entry(f"dataset tag '{dataset.tag}' normalized to python-safe name '{python_dataset_tag}'", "INFO", upload=upload)
 
         model_file_name = f"{python_dataset_tag}.py"
 
@@ -45,14 +45,16 @@ class Command(UploadRequired, BaseCommand):
 
         dmi.save()
         upload.update(dynamic_model_created=True)
-        make_log_entry(f"Saved Dynamic Model instance for dataset {dataset.tag}", "CREATED", upload=upload)
+        make_log_entry(f"saved Dynamic Model instance for dataset {dataset.tag}", "CREATED", upload=upload)
 
         # dims attribute is unset (null) on variables that contain a single entry (scalar), not an array, e.g. axi(e)s label(s), so filtering them out here
         variables = dataset.variables.filter(dims__isnull=False).exclude(var_logic_type='ignore_data')
-        make_log_entry(f"Data from {variables.count()}/{dataset.variables.count()} variables will be saved in the db.", "INFO", upload=upload)
+        make_log_entry(f"data from {variables.count()}/{dataset.variables.count()} variables will be saved in the db", "INFO", upload=upload)
         
         if variables.count() == 0:
-            make_log_entry("0 non-scalar variables found in the dataset.", "ERROR", upload=upload)
+            message = "0 non-scalar variables found in the dataset"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             exit(1)
     
         for variable in variables:
@@ -70,11 +72,13 @@ class Command(UploadRequired, BaseCommand):
                     variable_instance=variable,
                     dynamic_model=dmi
                 ))
-                make_log_entry(f"Added dynamic field '{dmi.df_list[-1]}' for variable '{variable.name}'", upload=upload)
+                make_log_entry(f"added dynamic field '{dmi.df_list[-1]}' for variable '{variable.name}'", "INFO", upload=upload)
 
             elif variable.dims == 1:
                 if variable.dim_sizes is None:
-                    make_log_entry(f"Variable '{variable.name}' with dims = {variable.dims} does not have dim_sizes set", "ERROR", upload=upload)
+                    message = f"variable '{variable.name}' with dims = {variable.dims} does not have dim_sizes set"
+                    make_log_entry(message, "ERROR", upload=upload)
+                    logger.error(message, exc_info=True)
                     upload.terminate()
                 
                 dmi.df_list.append(DynamicField(
@@ -85,12 +89,11 @@ class Command(UploadRequired, BaseCommand):
                     dynamic_model=dmi
                 ))
                 
-                make_log_entry(
-                    f"Added ARRAY dynamic field '{var_name}' (size={variable.dim_sizes}) for variable '{variable.name}'", upload=upload)
+                make_log_entry(f"added ARRAY dynamic field '{var_name}' (size={variable.dim_sizes}) for variable '{variable.name}'", "INFO", upload=upload)
             else:
-                make_log_entry(f"Number of dimensions '{variable.dims}' in '{variable.name}' is not supported yet, skipping field creation", "WARNING", upload=upload)
+                make_log_entry(f"number of dimensions '{variable.dims}' in '{variable.name}' is not supported yet, skipping field creation", "WARNING", upload=upload)
                 continue
 
         DynamicField.objects.bulk_create(dmi.df_list)
-        make_log_entry(f"Saved {dmi.fields.count()} data fields for model {dmi.model_name}", "CREATED", upload=upload)
+        make_log_entry(f"saved {dmi.fields.count()} data fields for model {dmi.model_name}", "CREATED", upload=upload)
         del dmi.df_list

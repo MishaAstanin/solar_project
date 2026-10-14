@@ -43,7 +43,7 @@ class Command(UploadRequired, BaseCommand):
                     da_instance = dataset.attributes.get(title=global_attrs[field]['gattribute_name'])
                     da_instance.update(linked_standard_field = field)
                 except:
-                    make_log_entry(f"Global attribute '{field}' from match file not exist in the CDF", "WARNING", upload=upload)
+                    make_log_entry(f"global attribute '{field}' from match file not exist in the CDF", "WARNING", upload=upload)
 
             # if value is different, change it
             if getattr(dataset, attribute) != value:
@@ -51,12 +51,14 @@ class Command(UploadRequired, BaseCommand):
 
                 # notify if dataset hasn`t just been created
                 if not upload.dataset_created:
-                    make_log_entry(f"Replacing Dataset attribute {attribute} value '{getattr(dataset, attribute)}' with '{value}'", upload=upload)
+                    make_log_entry(f"replacing Dataset attribute {attribute} value '{getattr(dataset, attribute)}' with '{value}'", "INFO", upload=upload)
 
         try:
             dataset.save()
             upload.update(matchfile_global_applied=True)
         except Exception as e:
-            make_log_entry(f"When updating Dataset instance {dataset.tag} with global attributes from match file: {str(e)}", "ERROR", upload=upload)
+            message = f"when updating Dataset instance {dataset.tag} with global attributes from match file: {str(e)}"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
         else:
-            make_log_entry(f"Dataset instance {dataset.tag} updated with global attributes from match file", "SUCCESS", upload=upload)
+            make_log_entry(f"dataset instance {dataset.tag} updated with global attributes from match file", "INFO", upload=upload)

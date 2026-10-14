@@ -30,16 +30,20 @@ class Command(UploadRequired, BaseCommand):
             try:
                 data_type_instance = DataType.objects.get(cdf_file_label=variable.datatype)
             except:
-                make_log_entry(f"DataType instance for field '{field.field_name}' with cdf type '{variable.datatype}' is not supported", "ERROR", upload=upload)
+                message = f"dataType instance for field '{field.field_name}' with cdf type '{variable.datatype}' is not supported"
+                make_log_entry(message, "ERROR", upload=upload)
+                logger.error(message, exc_info=True)
                 exit(1)
     
             field.update(data_type_instance = data_type_instance)
 
             if data_type_instance.django_field is None:
-                make_log_entry(f"Field '{field.field_name}': '{variable.datatype}' default django field is unset. Will not be able to create model", "ERROR", upload=upload)
+                message = f"field '{field.field_name}': '{variable.datatype}' default django field is unset. Will not be able to create model"
+                make_log_entry(message, "ERROR", upload=upload)
+                logger.error(message, exc_info=True)
                 exit(1)
             if data_type_instance.numpy_type is None:
-                make_log_entry(f"Field '{field.field_name}': '{variable.datatype}' default numpy type is unset. Could create errors when plotting data", "WARNING", upload=upload)
+                make_log_entry(f"field '{field.field_name}': '{variable.datatype}' default numpy type is unset. Could create errors when plotting data", "WARNING", upload=upload)
 
             if data_type_instance.fillval != variable.fillval:
-                make_log_entry(f"Field '{field.field_name}': '{variable.datatype}' default fillval is '{data_type_instance.fillval}', in this dataset '{variable.fillval}'", "WARNING", upload=upload)
+                make_log_entry(f"field '{field.field_name}': '{variable.datatype}' default fillval is '{data_type_instance.fillval}', in this dataset '{variable.fillval}'", "WARNING", upload=upload)

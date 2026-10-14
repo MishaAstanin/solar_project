@@ -4,6 +4,11 @@ import subprocess
 from django.conf import settings
 from load_cdf.models import make_log_entry
 from .evaluate_extras import command_logger
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
+
 
 class Command(BaseCommand):
 
@@ -25,18 +30,20 @@ class Command(BaseCommand):
 
         # Check if the zip file and match file exist
         if not zip_filename.endswith('.zip') or not os.path.isfile(zip_path):
-            make_log_entry(f"zip file {zip_path} does not exist", "ERROR")
-            make_log_entry("Terminating")
+            message = f"zip file {zip_path} does not exist"
+            make_log_entry(message, "ERROR")
+            logger.error(message, exc_info=True)
             exit(1)
 
-        make_log_entry(f"Found file '{zip_path}'")
+        make_log_entry(f"found file '{zip_path}'", "INFO")
 
         if not match_filename.endswith('.json') or not os.path.isfile(match_file_path):
-            make_log_entry(f"match_file {match_file_path} does not exist", "ERROR")
-            make_log_entry("Terminating")
+            message = f"match_file {match_file_path} does not exist"
+            make_log_entry(message, "ERROR")
+            logger.error(message, exc_info=True)
             exit(1)
         
-        make_log_entry(f"Found file '{match_file_path}'")
+        make_log_entry(f"found file '{match_file_path}'", "INFO")
 
         # Read the match file
         try:
@@ -47,15 +54,21 @@ class Command(BaseCommand):
                 timeout=30
             )
             if result.returncode != 0:
-                make_log_entry(f"Error decoding JSON from match file: JSONDecodeError. Check if the file is a valid JSON.", "ERROR")
+                message = f"error decoding JSON from match file: JSONDecodeError. Check if the file is a valid JSON"
+                make_log_entry(message, "ERROR")
+                logger.error(message, exc_info=True)
                 exit(1)
 
-            make_log_entry(f"Match file {match_filename} opens successfully.")
+            make_log_entry(f"match file {match_filename} opens successfully", "INFO")
         
         except subprocess.TimeoutExpired:
-            make_log_entry(f"Error processing match file: timeout reading {match_filename}", "ERROR")
+            message = f"error processing match file: timeout reading {match_filename}"
+            make_log_entry(message, "ERROR")
+            logger.error(message, exc_info=True)
             exit(1)
 
         except Exception as e:
-            make_log_entry(f"Error processing match file: {str(e)}", "ERROR")
+            message = f"error processing match file: {str(e)}"
+            make_log_entry(message, "ERROR")
+            logger.error(message, exc_info=True)
             exit(1)

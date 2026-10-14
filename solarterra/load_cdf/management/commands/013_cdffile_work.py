@@ -2,6 +2,11 @@ from django.core.management.base import BaseCommand
 from spacepy import pycdf
 from load_cdf.models import *
 from .evaluate_extras import command_logger, UploadRequired
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
+
 
 class Command(UploadRequired, BaseCommand):
 
@@ -33,7 +38,7 @@ class Command(UploadRequired, BaseCommand):
 
             DatasetAttribute.objects.bulk_create(upload.da_list)
             upload.update(dataset_attributes_created=True)
-            make_log_entry(f"Saved {len(upload.da_list)} instances of DatasetAttribute for {dataset.tag}", "CREATED", upload=upload)
+            make_log_entry(f"saved {len(upload.da_list)} instances of DatasetAttribute for {dataset.tag}", "CREATED", upload=upload)
         else:
             # compare attributes existing and about-to-be-saved by NAME ONLY and DO NOT SAVE the new ones, just output the difference and exit if there is
 
@@ -41,10 +46,12 @@ class Command(UploadRequired, BaseCommand):
             existing_attrs = set(dataset.attributes.values_list('title', flat=True))
             diff_attrs =  new_attrs ^ existing_attrs
             if any(diff_attrs):
-                make_log_entry(f"Dataset already exists, check shows difference in '{diff_attrs}' dataset attributes", "ERROR", upload=upload)
+                message = f"dataset already exists, check shows difference in '{diff_attrs}' dataset attributes"
+                make_log_entry(message, "ERROR", upload=upload)
+                logger.error(message, exc_info=True)
                 upload.terminate()
             else:
-                make_log_entry(f"Dataset already exists, check shows no difference in dataset attribute NAMES", "INFO", upload=upload)
+                make_log_entry(f"dataset already exists, check shows no difference in dataset attribute names", "INFO", upload=upload)
 
 
         if upload.dataset_created:
@@ -62,9 +69,9 @@ class Command(UploadRequired, BaseCommand):
                     ))
 
             Variable.objects.bulk_create(upload.var_list)
-            make_log_entry(f"Saved {len(upload.var_list)} instances of Variable for {dataset.tag}", "CREATED", upload=upload)
+            make_log_entry(f"saved {len(upload.var_list)} instances of Variable for {dataset.tag}", "CREATED", upload=upload)
             VariableAttribute.objects.bulk_create(upload.var_attr_list)
-            make_log_entry(f"Saved {len(upload.var_attr_list)} instances of VariableAttribute for {dataset.tag}", "CREATED", upload=upload)
+            make_log_entry(f"saved {len(upload.var_attr_list)} instances of VariableAttribute for {dataset.tag}", "CREATED", upload=upload)
             upload.update(variables_created=True)
 
         else:
@@ -72,14 +79,14 @@ class Command(UploadRequired, BaseCommand):
             existing_vars = set(dataset.variables.values_list('name', flat=True))
             diff_vars = new_vars ^ existing_vars
             if any(diff_vars):
-                make_log_entry(f"Dataset already exists, check shows difference in '{diff_vars}' dataset variables", "ERROR", upload=upload)
+                message = f"dataset already exists, check shows difference in '{diff_vars}' dataset variables"
+                make_log_entry(message, "ERROR", upload=upload)
+                logger.error(message, exc_info=True)
                 upload.terminate()
             else:
-                make_log_entry(f"Dataset already exists, check shows no difference in dataset variable NAMES", "INFO", upload=upload)
+                make_log_entry(f"dataset already exists, check shows no difference in dataset variable names", "INFO", upload=upload)
                 # TODO: no checks for Variable attributes and no checks for the actual values difference
-
-        
-            
+ 
         del upload.da_list
         del upload.var_list
         del upload.var_attr_list

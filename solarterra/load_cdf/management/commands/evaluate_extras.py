@@ -1,4 +1,3 @@
-from django.core.management.base import BaseCommand
 from load_cdf.models import Upload, make_log_entry
 import logging
 
@@ -7,6 +6,7 @@ logger = logging.getLogger('solarterra.upload')
 
 
 # decorator to log command calls
+# [START] [EXIT] [CREATED] [INFO] [WARNING] [ERROR]
 def command_logger(func):
     
     def wrapper(*args, **kwargs):
@@ -20,10 +20,10 @@ def command_logger(func):
                 pass
 
         logger.debug(f"UPLOAD {upload}")
-        make_log_entry(f"In {func.__module__}:", "START", upload)
+        make_log_entry(f"in {func.__module__}:", "START", upload)
         logger.info(f"start {func.__module__}")
         func(*args, **kwargs)
-        make_log_entry(f"Completed {func.__module__}", "EXIT", upload)
+        make_log_entry(f"completed {func.__module__}", "EXIT", upload)
         logger.info(f"exit {func.__module__}")
     
     return wrapper
@@ -38,6 +38,6 @@ class UploadRequired:
             upload = Upload.objects.get(u_tag=upload_tag, dataset__tag=dataset_tag)
             return upload
         except:
-            make_log_entry(f"Upload instance with upload_tag {upload_tag} and dataset_tag {dataset_tag} is not found.", "EXIT")
+            make_log_entry(f"upload instance with upload_tag {upload_tag} and dataset_tag {dataset_tag} is not found", "EXIT")
             exit(0)
 

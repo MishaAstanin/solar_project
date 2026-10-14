@@ -4,6 +4,10 @@ import numpy as np
 from load_cdf.models import *
 from load_cdf.utils import safe_str
 from .evaluate_extras import command_logger, UploadRequired
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
 
 
 class Command(UploadRequired, BaseCommand):
@@ -21,20 +25,22 @@ class Command(UploadRequired, BaseCommand):
         dataset = upload.dataset
 
         if dataset.nrv_data.exists():
-            make_log_entry(f"NRV data for '{dataset.tag}' already exists ({dataset.nrv_data.count()} entries), skipping.", "FOUND", upload=upload)
+            make_log_entry(f"NRV data for '{dataset.tag}' already exists ({dataset.nrv_data.count()} entries), skipping", "INFO", upload=upload)
             return
 
         nrv_variables = [v for v in dataset.variables.filter(dims__isnull=False).exclude(var_logic_type='ignore_data') if v.is_nrv()]
 
         if not nrv_variables:
-            make_log_entry(f"Not found NRV variables for '{dataset.tag}'.", "INFO", upload=upload)
+            make_log_entry(f"not found NRV variables for '{dataset.tag}'", "INFO", upload=upload)
             return
-        make_log_entry(f"Found {len(nrv_variables)} NRV variables to save.", "INFO", upload=upload)
+        make_log_entry(f"found {len(nrv_variables)} NRV variables to save", "INFO", upload=upload)
 
         # NRV values ​​are the same in all files
         cdf_instance = CDFFileStored.objects.filter(upload=upload).first()
         if not cdf_instance:
-            make_log_entry("Not found CDF files for this upload.", "ERROR", upload=upload)
+            message = "not found CDF files for this upload"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             exit(1)
 
         cdf_obj = pycdf.CDF(cdf_instance.full_path)
@@ -44,13 +50,13 @@ class Command(UploadRequired, BaseCommand):
             var_name = variable.name
 
             if var_name not in cdf_obj:
-                make_log_entry(f"NRV variable '{var_name}' not found in CDF file, skipping.", "WARNING", upload=upload)
+                make_log_entry(f"NRV variable '{var_name}' not found in CDF file, skipping", "WARNING", upload=upload)
                 continue
 
             try:
                 raw = cdf_obj[var_name][...]
             except Exception as e:
-                make_log_entry(f"Could not read NRV variable '{var_name}': {e}", "WARNING", upload=upload)
+                make_log_entry(f"could not read NRV variable '{var_name}': {e}", "WARNING", upload=upload)
                 continue
 
             # numpy → python for JSON
@@ -66,7 +72,9 @@ class Command(UploadRequired, BaseCommand):
                 try:
                     data_type_instance = DataType.objects.get(cdf_file_label=variable.datatype)
                 except:
-                    make_log_entry(f"DataType instance for '{variable.name}' with cdf type '{variable.datatype}' is not supported", "ERROR", upload=upload)
+                    message = f"dataType instance for '{variable.name}' with cdf type '{variable.datatype}' is not supported"
+                    make_log_entry(message, "ERROR", upload=upload)
+                    logger.error(message, exc_info=True)
                     exit(1)
 
             nrv_entries.append(NRVData(
@@ -82,6 +90,6 @@ class Command(UploadRequired, BaseCommand):
         if nrv_entries:
             NRVData.objects.bulk_create(nrv_entries)
             upload.update(nrv_created=True)
-            make_log_entry(f"Saved {len(nrv_entries)} NRV entries for '{dataset.tag}'.", "CREATED", upload=upload)
+            make_log_entry(f"saved {len(nrv_entries)} NRV entries for '{dataset.tag}'", "CREATED", upload=upload)
         else:
-            make_log_entry(f"No NRV values extracted.", "WARNING", upload=upload)
+            make_log_entry(f"no NRV values extracted", "WARNING", upload=upload)

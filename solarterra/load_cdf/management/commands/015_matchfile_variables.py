@@ -2,6 +2,11 @@ from django.core.management.base import BaseCommand
 from load_cdf.models import *
 import json
 from .evaluate_extras import command_logger, UploadRequired
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
+
 
 def get_var_field(mf_str):
     if mf_str.startswith('MF_'):
@@ -50,7 +55,9 @@ class Command(UploadRequired, BaseCommand):
             try:
                 var_instance = var_qs.get(name=var_name)
             except Exception as e:
-                make_log_entry(f"Variable '{var_name}' from match file does not exist in the CDF file.", "ERROR", upload=upload)
+                message = f"variable '{var_name}' from match file does not exist in the CDF file"
+                make_log_entry(message, "ERROR", upload=upload)
+                logger.error(message, exc_info=True)
                 upload.terminate()
 
             # setting attribute values for one variable
@@ -60,7 +67,9 @@ class Command(UploadRequired, BaseCommand):
                 try:
                     var_field_base = get_var_field(json_var_attr)
                 except Exception as e:
-                    make_log_entry(f"When parsing matchfile variable '{var_name}: {e}'", "ERROR", upload=upload)
+                    message = f"when parsing matchfile variable '{var_name}: {e}'"
+                    make_log_entry(message, "ERROR", upload=upload)
+                    logger.error(message, exc_info=True)
                     continue
 
                 v_attr_names = var_attr_dict['vattribute_name']
@@ -72,7 +81,9 @@ class Command(UploadRequired, BaseCommand):
                     values = [values]
 
                 if len(v_attr_names) != len(values):
-                    make_log_entry(f"Length mismatch between vattribute_name ({len(v_attr_names)}) and value ({len(values)})", "ERROR", upload=upload)
+                    message = f"length mismatch between vattribute_name ({len(v_attr_names)}) and value ({len(values)})"
+                    make_log_entry(message, "ERROR", upload=upload)
+                    logger.error(message, exc_info=True)
                     continue
 
                 for v_attr_name, value in zip(v_attr_names, values):
@@ -89,7 +100,7 @@ class Command(UploadRequired, BaseCommand):
                     try:
                         setattr(var_instance, var_field, value)
                     except AttributeError:
-                        make_log_entry(f"Field {var_field} not found in model", "WARNING")
+                        make_log_entry(f"field {var_field} not found in model", "WARNING")
                 
                     if v_attr_name is None:
                         continue
@@ -98,12 +109,14 @@ class Command(UploadRequired, BaseCommand):
                         var_attr_instance = var_instance.attributes.get(title__iexact=v_attr_name)
                         var_attr_instance.update(linked_standard_field=var_field)
                     except Exception as e:
-                        make_log_entry(f"VariableAttribute '{v_attr_name}' for Variable '{var_name}' from match file does not exist in the CDF file.", "WARNING", upload=upload)
+                        make_log_entry(f"variableAttribute '{v_attr_name}' for Variable '{var_name}' from match file does not exist in the CDF file", "WARNING", upload=upload)
 
             try:
                 var_instance.save()
                 upload.update(matchfile_vars_applied=True)
-                make_log_entry(f"Updated Variable '{var_name}' and its attributes", "SUCCESS", upload=upload)
+                make_log_entry(f"updated Variable '{var_name}' and its attributes", "INFO", upload=upload)
             except Exception as e:
-                make_log_entry(f"On updating Variable instance '{var_name}' : {e}", "ERROR", upload=upload)
+                message = f"on updating Variable instance '{var_name}' : {e}"
+                make_log_entry(message, "ERROR", upload=upload)
+                logger.error(message, exc_info=True)
                 upload.terminate()

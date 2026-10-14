@@ -5,6 +5,11 @@ from django.conf import settings
 from load_cdf.models import *
 from load_cdf.utils import get_upload_tag, get_dataset_tag
 from .evaluate_extras import command_logger
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
+
 
 class Command(BaseCommand):
 
@@ -37,7 +42,7 @@ class Command(BaseCommand):
 
         upload.save()
         # Log the upload creation
-        make_log_entry(f"Created upload instance for {zip_filename} and {match_filename}.", "CREATED", upload=upload)
+        make_log_entry(f"created upload instance for {zip_filename} and {match_filename}", "CREATED", upload=upload)
 
         dataset_dir_path = os.path.join(settings.DATA_ROOT, dataset_tag.replace('_', '/'))
 
@@ -50,16 +55,18 @@ class Command(BaseCommand):
                     directory=str(dataset_dir_path)
                     )
             dataset.save()
-            make_log_entry(f"Dataset instance created for {dataset.tag}", "CREATED", upload=upload)
+            make_log_entry(f"dataset instance created for {dataset.tag}", "CREATED", upload=upload)
             upload.update(dataset_created = True)
 
         else:
-            make_log_entry(f"Dataset instance already exists for {dataset_tag}.", "FOUND EXISTING", upload=upload)
+            make_log_entry(f"dataset instance already exists for {dataset_tag}", "INFO", upload=upload)
 
         upload.dataset = dataset
 
         try:
             upload.save()
         except:
-            make_log_entry(f"Upload instance for dataset '{dataset.tag}' with upload_tag '{upload.u_tag}' exists.", "ERROR", upload=upload)
+            message = f"upload instance for dataset '{dataset.tag}' with upload_tag '{upload.u_tag}' exists"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             upload.terminate()

@@ -50,7 +50,9 @@ def save_single_file(cdf_file, fields, model_class, upload):
             try:
                 arr = arr.astype('object')
             except Exception as e:
-                make_log_entry(f"Something went wrong during int to object array conversion: file '{cdf_file.full_path}' field '{field.field_name}': {e}", upload=upload)
+                message = f"something went wrong during int to object array conversion: file '{cdf_file.full_path}' field '{field.field_name}': {e}"
+                make_log_entry(message, "ERROR", upload=upload)
+                logger.error(message, exc_info=True)
                 exit(1)
 
         # swap invalid datetime with None, everything else with np.nan
@@ -68,7 +70,9 @@ def save_single_file(cdf_file, fields, model_class, upload):
             fill_value = DataType.proper_type(var.fillval, arr.flat[0])
             
             if fill_value is None:
-                make_log_entry(f"Could not parse fillval: file '{cdf_file.full_path}' variable '{var.name}' datatype '{var.datatype}', numpy type '{arr.dtype}'", "ERROR")
+                message = f"could not parse fillval: file '{cdf_file.full_path}' variable '{var.name}' datatype '{var.datatype}', numpy type '{arr.dtype}'"
+                make_log_entry(message, "ERROR")
+                logger.error(message, exc_info=True)
                 exit(1)
             # choose values that are fillvals
             condition = condition | (arr == fill_value)
@@ -84,7 +88,7 @@ def save_single_file(cdf_file, fields, model_class, upload):
         if 'float' in str(arr.dtype):
             nan_count = int(np.isnan(arr).sum())
             if nan_count > 0:
-                make_log_entry(f"{nan_count} invalid values in '{field.field_name}' file '{cdf_file.full_path}'")
+                make_log_entry(f"{nan_count} invalid values in '{field.field_name}' file '{cdf_file.full_path}'", "INFO")
         
         
         # epoch parsing
@@ -139,8 +143,8 @@ def delete_previous_file_data(cdf_file, model_class, upload):
     old_cdf_files.update(loaded=False, saved_rows=0)
 
     make_log_entry(
-        f"Found previous version of file '{cdf_file.full_path}'. "
-        f"Deleted {old_rows_count} old rows before reloading updated file.",
+        f"found previous version of file '{cdf_file.full_path}'. "
+        f"Deleted {old_rows_count} old rows before reloading updated file",
         "INFO",
         upload=upload
     )
@@ -163,34 +167,40 @@ class Command(UploadRequired, BaseCommand):
         try:
             upload = Upload.objects.get(u_tag=upload_tag, dataset__tag=dataset_tag)
         except:
-            make_log_entry(f"Upload instance with upload_tag {upload_tag} and dataset_tag {dataset_tag} is not found.", "EXIT")
+            make_log_entry(f"upload instance with upload_tag {upload_tag} and dataset_tag {dataset_tag} is not found", "EXIT")
             exit(0)
 
         try:
             dynamic_model_instance = dmi = upload.dataset.dynamic
         except Exception as e:
-            make_log_entry(f"Retrieving dynamic model instance: {e}", "ERROR", upload=upload)
+            message = f"retrieving dynamic model instance: {e}"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             upload.terminate()
 
         try:
             model_class = dmi.resolve_class()
         except Exception as e:
-            make_log_entry(f"Retrieving data model class: {e}", "ERROR", upload=upload)
+            message = f"retrieving data model class: {e}"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             upload.terminate()
         
         if model_class is None:
-            make_log_entry(f"Model class '{dmi.model_name}' is not found.", "ERROR", upload=upload)
+            message = f"model class '{dmi.model_name}' is not found"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             exit(1)
         else:
-            make_log_entry(f"Resolved data model class '{dmi.model_name}'", "SUCCESS", upload=upload)
+            make_log_entry(f"resolved data model class '{dmi.model_name}'", "INFO", upload=upload)
 
         
         cdf_files = upload.cdf_files.all()
         if cdf_files.count() == 0:
-            make_log_entry("No new files found to upload. All files from this archive already exist in the dataset.", "INFO", upload=upload)
+            make_log_entry("no new files found to upload. All files from this archive already exist in the dataset", "INFO", upload=upload)
             return
         else:
-            make_log_entry(f"{cdf_files.count()} files are to be uploaded to the db.", upload=upload)
+            make_log_entry(f"{cdf_files.count()} files are to be uploaded to the db", "INFO", upload=upload)
 
         fields = dmi.fields.order_by('variable_instance__depend_0', 'id')
 
@@ -201,7 +211,7 @@ class Command(UploadRequired, BaseCommand):
 
         for index, cdf_file in enumerate(cdf_files):
             if cdf_file.loaded:
-                make_log_entry(f"File '{cdf_file.full_path}' is supposed to be loaded with {cdf_file.saved_rows}, skipping", upload=upload)
+                make_log_entry(f"file '{cdf_file.full_path}' is supposed to be loaded with {cdf_file.saved_rows}, skipping", "INFO", upload=upload)
                 continue
             t1 = timeit.default_timer()
             
@@ -215,14 +225,15 @@ class Command(UploadRequired, BaseCommand):
             current_percent = math.floor(index / file_count * 100)
             
             if current_percent > percent:
-                make_log_entry(f"{current_percent}% done, {index + 1} files uploaded, total time {round(sum(deltas), 5)}, avg time per file {round(sum(deltas) / len(deltas), 5)}", upload=upload)
-                logger.info(f"{current_percent}% done, {index + 1} files uploaded, total time {round(sum(deltas), 5)}, avg time per file {round(sum(deltas) / len(deltas), 5)}")
+                message = f"{current_percent}% done, {index + 1} files uploaded, total time {round(sum(deltas), 5)}, avg time per file {round(sum(deltas) / len(deltas), 5)}"
+                make_log_entry(message, "INFO", upload=upload)
+                logger.info(message)
                 percent = current_percent
         
         upload.dataset.rebuild_time_range()
 
         make_log_entry(
-            f"Updated dataset time range: "
+            f"updated dataset time range: "
             f"{upload.dataset.time_start} .. {upload.dataset.time_end}",
             "INFO",
             upload=upload

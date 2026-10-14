@@ -2,8 +2,12 @@ from django.core.management.base import BaseCommand
 import os
 from django.template.loader import render_to_string
 from load_cdf.models import *
-from load_cdf.utils import safe_str
 from .evaluate_extras import command_logger, UploadRequired
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
+
 
 class Command(UploadRequired, BaseCommand):
 
@@ -21,12 +25,16 @@ class Command(UploadRequired, BaseCommand):
         try:
             dynamic_model = upload.dataset.dynamic
         except Exception as e:
-            make_log_entry("Dynamic model instance: {e}", "ERROR", upload=upload)
+            message = "dynamic model instance: {e}"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             upload.terminate()
 
 
         if  os.path.exists(dynamic_model.model_file_path):
-            make_log_entry(f"Data model file '{dynamic_model.model_file_path}' already exists.", "ERROR", upload=upload)
+            message = f"data model file '{dynamic_model.model_file_path}' already exists"
+            make_log_entry(message, "ERROR", upload=upload)
+            logger.error(message, exc_info=True)
             exit(0)
 
         
@@ -35,4 +43,4 @@ class Command(UploadRequired, BaseCommand):
         with open(dynamic_model.model_file_path, "w+") as model_file:
             model_file.write(content)
 
-        make_log_entry(f"Saved data model template file '{dynamic_model.model_file_path}'", "SUCCESS", upload=upload)
+        make_log_entry(f"saved data model template file '{dynamic_model.model_file_path}'", "INFO", upload=upload)
