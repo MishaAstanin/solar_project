@@ -798,7 +798,6 @@ def make_log_entry(message, code=None, upload=None, color=None):
 
     def to_db(upload, code, message):
         log_entry = LogEntry(
-                timestamp=NOW(),
                 upload=upload,
                 code=code,
                 message=message)
