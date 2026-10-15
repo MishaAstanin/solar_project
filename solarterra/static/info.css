@@ -41,19 +41,23 @@
 	background-color: #90EE90;
 }
 
+.start,
+.exit {
+	color: blue;
+}
+
 .created {
 	color: green;
 }
 
-.exit,
-.start {
-	color: blue;
-}
-
-.error {
-	color: red;
+.info {
+	color: gray;
 }
 
 .warning {
 	color: orange;
+}
+
+.error {
+	color: red;
 }

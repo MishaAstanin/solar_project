@@ -5,6 +5,10 @@ from load_cdf.models import make_log_entry
 from load_cdf.utils import get_upload_tag, get_dataset_tag
 from .evaluate_extras import command_logger
 import json
+import logging
+
+
+logger = logging.getLogger('solarterra.upload')
 
 
 """
@@ -50,7 +54,7 @@ class Command(BaseCommand):
                 match_data = json.load(f)
             matchfile_version = match_data['GlobalAttributes']['MATCHFILE_VERSION']['value']
         except Exception as e:
-            make_log_entry(f"Could not read MATCHFILE_VERSION from matchfile: {e}", "WARNING", upload=upload)
+            make_log_entry(f"could not read MATCHFILE_VERSION from matchfile: {e}", "WARNING", upload=upload)
 
         upload.update(
             is_initial=False,
@@ -67,11 +71,15 @@ class Command(BaseCommand):
         dataset = Dataset.objects.get_or_none(tag=dataset_tag)
 
         if dataset is None:
-            make_log_entry(f"Dataset '{dataset_tag}' does not exist. Run 'evaluate' first.", "ERROR")
+            message = f"dataset '{dataset_tag}' does not exist. Run 'evaluate' first"
+            make_log_entry(message, "ERROR")
+            logger.error(message, exc_info=True)
             exit(1)
 
         if not hasattr(dataset, 'dynamic') or dataset.dynamic is None:
-            make_log_entry(f"DynamicModel for '{dataset_tag}' does not exist. Run 'evaluate' first.", "ERROR")
+            message = f"dynamicModel for '{dataset_tag}' does not exist. Run 'evaluate' first"
+            make_log_entry(message, "ERROR")
+            logger.error(message, exc_info=True)
             exit(1)
 
         try:
@@ -79,7 +87,9 @@ class Command(BaseCommand):
             if model_class is None:
                 raise Exception("resolve_class() returned None")
         except Exception as e:
-            make_log_entry(f"Data model class for '{dataset_tag}' is not accessible: {e}.", "ERROR")
+            message = f"data model class for '{dataset_tag}' is not accessible: {e}"
+            make_log_entry(message, "ERROR")
+            logger.error(message, exc_info=True)
             exit(1)
 
-        make_log_entry(f"Dataset '{dataset_tag}' and its model '{dataset.dynamic.model_name}' verified.", "INFO")
+        make_log_entry(f"dataset '{dataset_tag}' and its model '{dataset.dynamic.model_name}' verified", "INFO")
