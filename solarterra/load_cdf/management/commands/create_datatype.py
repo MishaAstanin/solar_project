@@ -91,5 +91,6 @@ class Command(BaseCommand):
                 fillval=TYPE_FILLVAL[cdf_file_label]
             ))
 
-        DataType.objects.bulk_create(datatypes)
+        created = DataType.objects.bulk_create(datatypes)
 
+        self.stdout.write(self.style.SUCCESS(f"Successfully created {len(created)} DataType records"))
