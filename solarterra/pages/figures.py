@@ -133,6 +133,7 @@ def scatter(plot):
     config = {'displayModeBar': False}
 
     plot_div = fig.to_html(config=config, full_html=False,
+                           include_plotlyjs=False,
                            div_id=f"plot_div_{plot.variable.id}", default_width="100%")
     return plot_div
 
@@ -188,6 +189,7 @@ def n_trace(plot):
 
     config = {'displayModeBar': False}
     plot_div = fig.to_html(config=config, full_html=False,
+                           include_plotlyjs=False,
                            div_id=f"plot_div_{plot.variable.id}", default_width="100%")
 
     return plot_div
@@ -272,6 +274,7 @@ def spectrogram(plot):
     plot_div = fig.to_html(
         config=config,
         full_html=False,
+        include_plotlyjs=False,
         div_id=f"plot_div_{plot.variable.id}",
         default_width="100%"
     )
