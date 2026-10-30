@@ -177,17 +177,20 @@ class Plot():
 
     @staticmethod
     def _extract_array_component(array_column, component_index):
-        result = []
+        try:
+            matrix = np.array(array_column.tolist(), dtype=float)
+            if matrix.ndim == 2 and matrix.shape[1] > component_index:
+                return matrix[:, component_index].copy()
+        except (ValueError, TypeError):
+            pass
 
-        for row in array_column:
-            if row is None or len(row) <= component_index:
-                result.append(np.nan)
-                continue
-
-            value = row[component_index]
-            result.append(np.nan if value is None else value)
-
-        return np.array(result, dtype=float)
+        result = np.full(len(array_column), np.nan, dtype=float)
+        for i, row in enumerate(array_column):
+            if row is not None and len(row) > component_index:
+                value = row[component_index]
+                if value is not None:
+                    result[i] = value
+        return result
 
 
     def _get_full_value_array(self, query, component_index):
