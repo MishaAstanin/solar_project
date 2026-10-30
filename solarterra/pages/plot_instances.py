@@ -58,10 +58,10 @@ class DBQuery():
     """
 
     def set_arrays(self):
-        if not self.queryset.exists():
+        rows = list(self.queryset.values_list(*self.all_fields))
+        if not rows:
             return
 
-        rows = list(self.queryset.values_list(*self.all_fields))
         columns = list(zip(*rows))
 
         self.arrays = [

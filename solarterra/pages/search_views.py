@@ -10,6 +10,8 @@ from pages.plotting import get_plots
 from export.dispatcher import export_dispatcher
 import logging
 
+import time
+
 
 logger = logging.getLogger('solarterra.plot')
 
@@ -132,7 +134,10 @@ def plot_clicked(request):
         ts_start, ts_stop = shift_interval(ts_start, ts_stop, shift_direction)
 
         #get plots
+        t0 = time.time()
         plots = get_plots(var_instances, ts_start, ts_stop, validate)
+        t1 = time.time()
+        print(f"[PERF] get_plots: {t1-t0:.2f}s, plots: {len(plots)}")
 
         for plot in plots:
             logger.info(
@@ -148,7 +153,13 @@ def plot_clicked(request):
             'plots' : plots,
             'selected_variable_ids': list(var_instances.values_list("id", flat=True)),
         }
-        return render(request, "pages/plot_page.html", context=context)
+        
+        t2 = time.time()
+        response = render(request, "pages/plot_page.html", context=context)
+        t3 = time.time()
+        print(f"[PERF] render: {t3-t2:.2f}s")
+        
+        return response
 
     #forms aren't ok, re-render search page with errors
     else:
