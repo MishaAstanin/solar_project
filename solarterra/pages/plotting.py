@@ -40,25 +40,33 @@ def get_plots(variables, t_start, t_end, validate):
         
         # creating the query
         query.query()
-        # queryset evaluation
-        query.set_arrays()
-        row_count = query.get_array_len() or 0 
-                
-        if row_count > 0:
-            print(f"[PERF] DB query {item.dataset.tag}: {time.time()-t_q:.2f}s, rows: {row_count}")
-            aggregation = row_count > Bin.PPP
-        else:
-            aggregation = False
 
-        if aggregation and row_count > 0:
-            _i_start = tf(t_start)
-            _i_stop = tf(t_end)
-            _bin_starts = np.arange(
-                _i_start,
-                _i_stop + (bin_instance.bin_seconds * 2),
-                step=bin_instance.bin_seconds)
-            _bin_centers = _bin_starts + bin_instance.half_bin
-            query.set_bin_map(_bin_starts)
+        # COUNT — быстрый запрос, не загружает данные
+        row_count = query.queryset.count()
+        aggregation = row_count > Bin.PPP
+
+        if row_count > 0:
+            if aggregation:
+                # БЫСТРАЯ ВЕТКА: агрегация в SQL (~1000 строк вместо миллионов)
+                field_validators = {}
+                for var in vars_in_query:
+                    dyn = var.dynamic.first()
+                    if dyn is None:
+                        continue
+                    field_validators[dyn.field_name] = (var.validmin, var.validmax)
+
+                query.set_arrays_sql_aggregated(
+                    bin_instance.bin_seconds,
+                    tf(t_start),
+                    field_validators,
+                )
+                print(f"[PERF] DB query (SQL agg) {item.dataset.tag}: "
+                      f"{time.time()-t_q:.2f}s, raw rows: {row_count}")
+            else:
+                # МЕДЛЕННАЯ ВЕТКА: загрузка всех данных (но их < 1000)
+                query.set_arrays()
+                print(f"[PERF] DB query {item.dataset.tag}: "
+                      f"{time.time()-t_q:.2f}s, rows: {row_count}")
             
         # need to generate plot spaces, even if there is not data for a plot
         for var in vars_in_query:
@@ -68,20 +76,14 @@ def get_plots(variables, t_start, t_end, validate):
                     variable=var,
                     x_field=filter_field,
                     validate=validate)
-            
-            # no computations if there isn`t any data
-            if row_count > 0:
 
+            if row_count > 0:
                 if aggregation:
-                    plot.bin_instance = bin_instance
-                    plot.bin_starts_array = _bin_starts
-                    plot.bin_centers_array = _bin_centers
-            
+                    plot.prepare_bins(bin_instance)
                 plot.aggregation = aggregation
                 t_p = time.time()
                 plot.set_arrays(query)
 
-            # get the plotly figure
             plot.get_figure()
             print(f"[PERF] plot {var.name}: {time.time()-t_p:.2f}s")
             plots.append(plot)

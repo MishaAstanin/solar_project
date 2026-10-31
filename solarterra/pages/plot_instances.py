@@ -4,6 +4,7 @@ from solarterra.utils import float_ts_resolver as ft
 
 import math
 import datetime as dt
+from django.db import connection
 from pages.figures import scatter, n_trace, spectrogram
 import logging
 
@@ -12,7 +13,6 @@ logger = logging.getLogger('solarterra.plot')
 
 
 class DBQuery():
-
 
     def __init__(self, dataset, filter_field, t_start, t_stop, fields):
 
@@ -38,6 +38,9 @@ class DBQuery():
 
         # bin mapping over over the array of epochs
         self.bin_map = None
+
+        # True когда данные уже агрегированы в SQL
+        self.sql_aggregated = False
 
 
     def query(self):
@@ -81,6 +84,175 @@ class DBQuery():
 
     def set_bin_map(self, bin_starts_array):
         self.bin_map = np.searchsorted(bin_starts_array, self.get_full_time_array(), side="right")
+
+    def set_arrays_sql_aggregated(self, bin_seconds, i_start, field_validators):
+        """
+        Агрегация на стороне PostgreSQL через GROUP BY.
+        Вместо загрузки миллионов строк в Python, БД сама считает среднее
+        по бинам и возвращает ~1000 строк.
+
+        Результат (self.arrays) имеет тот же формат, что и set_arrays():
+        - self.arrays[0] — временное поле (bin centers)
+        - self.arrays[1..] — агрегированные значения
+        - ArrayField сохраняются как object-массив из list
+
+        field_validators: dict {field_name: (validmin, validmax)}
+          validmin/validmax — скаляр, list или None.
+          Для list — валидация покомпонентная (для ArrayField).
+        """
+        table = self.data_class._meta.db_table
+
+        # Убираем дубликаты из all_fields, сохраняя порядок.
+        # Дубликаты бывают, когда несколько переменных ссылаются
+        # на одно и то же поле БД.
+        unique_fields = list(dict.fromkeys(self.all_fields))
+
+        # Определяем, какие поля — массивы, а какие — скаляры.
+        # Берём одну строку из БД (LIMIT 1) и смотрим типы.
+        sample = self.queryset.values_list(*unique_fields).first()
+        if sample is None:
+            return
+
+        field_info = {}  # field_name → (is_array, size)
+        for field_name, value in zip(unique_fields, sample):
+            if isinstance(value, (list, tuple)):
+                field_info[field_name] = (True, len(value))
+            else:
+                field_info[field_name] = (False, 1)
+
+        # --- Строим SQL-запрос ---
+        #
+        # Бин: FLOOR((epoch - i_start) / bin_seconds) + 1
+        # +1 чтобы совпасть с np.searchsorted(..., side="right") в set_bin_map.
+        #
+        # Валидация: AVG(CASE WHEN field BETWEEN vmin AND vmax THEN field END)
+        # AVG() в PostgreSQL игнорирует NULL — невалидные точки исключаются
+        # ДО усреднения, как в оригинальном Python-коде.
+
+        select_parts = [
+            f'FLOOR(("{self.filter_field}" - %s) / %s)::int + 1 AS bin_idx'
+        ]
+        params = [i_start, bin_seconds]
+
+        # col_map: field_name → [(column_index_in_result, component_or_None), ...]
+        col_map = {}
+        result_col = 1  # 0 — bin_idx
+
+        for field_name in unique_fields:
+            is_array, size = field_info[field_name]
+            validmin, validmax = field_validators.get(field_name, (None, None))
+
+            if is_array:
+                col_map[field_name] = []
+                for comp in range(size):
+                    access = f'("{field_name}")[{comp + 1}]'  # PG массивы 1-based
+                    vmin = self._pick_validator(validmin, comp)
+                    vmax = self._pick_validator(validmax, comp)
+                    expr = self._build_avg_expr(access, vmin, vmax, params)
+                    select_parts.append(f'{expr} AS avg_{field_name}_{comp}')
+                    col_map[field_name].append((result_col, comp))
+                    result_col += 1
+            else:
+                access = f'"{field_name}"'
+                vmin = self._pick_validator(validmin, None)
+                vmax = self._pick_validator(validmax, None)
+                expr = self._build_avg_expr(access, vmin, vmax, params)
+                select_parts.append(f'{expr} AS avg_{field_name}')
+                col_map[field_name] = [(result_col, None)]
+                result_col += 1
+
+        sql = f"""
+            SELECT {', '.join(select_parts)}
+            FROM "{table}"
+            WHERE "{self.filter_field}" >= %s
+              AND "{self.filter_field}" <= %s
+            GROUP BY bin_idx
+            ORDER BY bin_idx
+        """
+        params.extend([self.start_limit, self.stop_limit])
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+
+        if not rows:
+            self.sql_aggregated = True
+            return
+
+        # Размер результата совпадает с bin_starts_array в Plot.prepare_bins().
+        n_bins = len(np.arange(
+            i_start,
+            self.stop_limit + bin_seconds * 2,
+            step=bin_seconds
+        ))
+
+        # --- Собираем массивы из SQL-результата ---
+        unique_arrays = {}
+
+        for field_name in unique_fields:
+            is_array, size = field_info[field_name]
+
+            if is_array:
+                arr = np.empty(n_bins, dtype=object)
+                for i in range(n_bins):
+                    arr[i] = [np.nan] * size
+
+                for row in rows:
+                    bin_idx = row[0]
+                    if bin_idx < 0 or bin_idx >= n_bins:
+                        continue
+                    components = []
+                    for col_idx, _ in col_map[field_name]:
+                        val = row[col_idx]
+                        components.append(float(val) if val is not None else np.nan)
+                    arr[bin_idx] = components
+
+                unique_arrays[field_name] = arr
+            else:
+                arr = np.full(n_bins, np.nan, dtype=float)
+                col_idx = col_map[field_name][0][0]
+                for row in rows:
+                    bin_idx = row[0]
+                    if 0 <= bin_idx < n_bins:
+                        val = row[col_idx]
+                        if val is not None:
+                            arr[bin_idx] = float(val)
+                unique_arrays[field_name] = arr
+
+        # Разворачиваем в исходный порядок all_fields (с дубликатами)
+        self.arrays = [unique_arrays[fn] for fn in self.all_fields]
+        self.sql_aggregated = True
+
+    @staticmethod
+    def _pick_validator(validator, component_index):
+        """Выбирает validmin/validmax для компоненты или скаляра."""
+        if validator is None:
+            return None
+        if isinstance(validator, list):
+            if component_index is None or component_index >= len(validator):
+                return None
+            return validator[component_index]
+        return validator
+
+    @staticmethod
+    def _build_avg_expr(access, vmin, vmax, params):
+        """Строит AVG(...) с опциональной SQL-валидацией через CASE WHEN."""
+        conditions = []
+        if vmin is not None:
+            try:
+                conditions.append(f'{access} >= %s')
+                params.append(float(vmin))
+            except (ValueError, TypeError):
+                pass
+        if vmax is not None:
+            try:
+                conditions.append(f'{access} <= %s')
+                params.append(float(vmax))
+            except (ValueError, TypeError):
+                pass
+        if conditions:
+            return f'AVG(CASE WHEN {" AND ".join(conditions)} THEN {access} END)'
+        return f'AVG({access})'
 
 
 class Bin():
@@ -177,20 +349,17 @@ class Plot():
 
     @staticmethod
     def _extract_array_component(array_column, component_index):
-        try:
-            matrix = np.array(array_column.tolist(), dtype=float)
-            if matrix.ndim == 2 and matrix.shape[1] > component_index:
-                return matrix[:, component_index].copy()
-        except (ValueError, TypeError):
-            pass
+        result = []
 
-        result = np.full(len(array_column), np.nan, dtype=float)
-        for i, row in enumerate(array_column):
-            if row is not None and len(row) > component_index:
-                value = row[component_index]
-                if value is not None:
-                    result[i] = value
-        return result
+        for row in array_column:
+            if row is None or len(row) <= component_index:
+                result.append(np.nan)
+                continue
+
+            value = row[component_index]
+            result.append(np.nan if value is None else value)
+
+        return np.array(result, dtype=float)
 
 
     def _get_full_value_array(self, query, component_index):
@@ -308,14 +477,37 @@ class Plot():
             result = np.full(self.x_field_array.shape, np.nan, dtype=float)
             result[idx] = means
             self.y_arrays.append(result)
+
+    def get_sql_agg_y_arrays(self, query):
+        """
+        Извлекает y-массивы из данных, уже агрегированных в SQL.
+        Данные в query.arrays уже содержат ~1000 точек (средние по бинам
+        с применённой валидацией), поэтому ни агрегация, ни валидация
+        на Python-уровне не нужны.
+        """
+        for component_index in self.component_indexes:
+            full_value_array = self._get_full_value_array(query, component_index)
+
+            if np.isnan(full_value_array).all():
+                self.y_arrays.append([])
+                continue
+
+            # Выравниваем по размеру x_field_array (на случай расхождения
+            # в 1 элемент из-за округления в arange)
+            result = np.full(self.x_field_array.shape, np.nan, dtype=float)
+            n = min(len(full_value_array), len(result))
+            result[:n] = full_value_array[:n]
+            self.y_arrays.append(result)
         
     def set_arrays(self, query):
-        # includes validation
         if self.aggregation:
             self.get_agg_x_array()
-            self.get_agg_y_arrays(query)
-
-        # validation on plotting, because no nans for int types means no swap
+            if query.sql_aggregated:
+                # Данные уже агрегированы в SQL — быстрая ветка
+                self.get_sql_agg_y_arrays(query)
+            else:
+                # Данные загружены сырыми — старая ветка
+                self.get_agg_y_arrays(query)
         else:
             self.get_x_array(query)
             self.get_y_arrays(query)
