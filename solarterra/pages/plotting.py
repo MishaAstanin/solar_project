@@ -41,19 +41,19 @@ def get_plots(variables, t_start, t_end, validate):
         # creating the query
         query.query()
 
-        # COUNT — быстрый запрос, не загружает данные
         row_count = query.queryset.count()
         aggregation = row_count > Bin.PPP
 
         if row_count > 0:
             if aggregation:
-                # БЫСТРАЯ ВЕТКА: агрегация в SQL (~1000 строк вместо миллионов)
+                # aggregation in SQL
                 field_validators = {}
-                for var in vars_in_query:
-                    dyn = var.dynamic.first()
-                    if dyn is None:
-                        continue
-                    field_validators[dyn.field_name] = (var.validmin, var.validmax)
+                if validate:
+                    for var in vars_in_query:
+                        dyn = var.dynamic.first()
+                        if dyn is None:
+                            continue
+                        field_validators[dyn.field_name] = (var.validmin, var.validmax)
 
                 query.set_arrays_sql_aggregated(
                     bin_instance.bin_seconds,
@@ -63,7 +63,7 @@ def get_plots(variables, t_start, t_end, validate):
                 print(f"[PERF] DB query (SQL agg) {item.dataset.tag}: "
                       f"{time.time()-t_q:.2f}s, raw rows: {row_count}")
             else:
-                # МЕДЛЕННАЯ ВЕТКА: загрузка всех данных (но их < 1000)
+                # loading all data
                 query.set_arrays()
                 print(f"[PERF] DB query {item.dataset.tag}: "
                       f"{time.time()-t_q:.2f}s, rows: {row_count}")
