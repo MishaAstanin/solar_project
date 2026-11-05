@@ -174,6 +174,7 @@ class DBQuery():
         """
         params.extend([self.start_limit, self.stop_limit])
 
+        # print(f"[SQL DEBUG] {sql[:300]}")
         with connection.cursor() as cursor:
             cursor.execute(sql, params)
             rows = cursor.fetchall()
@@ -242,7 +243,10 @@ class DBQuery():
     def _build_avg_expr(access, vmin, vmax, params):
         """Строит AVG(...) SQL-валидацией через CASE WHEN"""
 
-        conditions = [f'NOT isnan({access})']
+        # for validate=OFF
+        # PostgreSQL treats NaN values as equal, and greater than all non-NaN values
+        # NaN > Infinity
+        conditions = [f"{access}::double precision <= 'Infinity'"]
         if vmin is not None:
             try:
                 conditions.append(f'{access} >= %s')
