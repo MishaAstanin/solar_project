@@ -358,17 +358,21 @@ class Plot():
 
     @staticmethod
     def _extract_array_component(array_column, component_index):
-        result = []
+        n = len(array_column)
+        if n == 0:
+            return np.array([], dtype=float)
 
-        for row in array_column:
-            if row is None or len(row) <= component_index:
-                result.append(np.nan)
-                continue
+        result = np.empty(n, dtype=float)
+        result[:] = np.nan
 
-            value = row[component_index]
-            result.append(np.nan if value is None else value)
+        for i in range(n):
+            row = array_column[i]
+            if row is not None and len(row) > component_index:
+                val = row[component_index]
+                if val is not None:
+                    result[i] = val
 
-        return np.array(result, dtype=float)
+        return result
 
 
     def _get_full_value_array(self, query, component_index):
