@@ -285,19 +285,6 @@ class Bin():
 
 class Plot():
 
-    # start and stop as datetimes
-    t_start = None
-    t_stop = None
-    
-    # in seconds
-    bin_instance = None
-    # numpy range of the starts of time bins
-    bin_starts_array = None
-    bin_centers_array = None
-
-    # plotly figure
-    figure = None
-
     def __init__(self, t_start, t_stop, variable, x_field, validate):
 
         # start and stop as datetimes

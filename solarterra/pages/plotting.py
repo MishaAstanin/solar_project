@@ -10,17 +10,14 @@ logger = logging.getLogger('solarterra.plot')
 
 def get_plots(variables, t_start, t_end, validate):
     import time
-     
-    # do the work with the the bin
-    Plot.t_start = t_start
-    Plot.t_stop = t_end
+
     bin_instance = Bin(t_start, t_end)
     plots = []
 
     ts_variables = variables.filter(display_type="time_series")
     spec_variables = variables.filter(display_type="spectrogram")
 
-    for item in ts_variables.order_by('dataset__tag').distinct('dataset__tag', 'depend_0'):
+    for item in ts_variables.order_by('dataset__tag', 'depend_0').distinct('dataset__tag', 'depend_0'):
         t_q = time.time()
         vars_in_query = ts_variables.filter(dataset=item.dataset, depend_0=item.depend_0).order_by('name')
 
