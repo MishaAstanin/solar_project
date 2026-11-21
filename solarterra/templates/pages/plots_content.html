@@ -1,0 +1,228 @@
+<div class="page-flex">
+    <div class="central_page">
+        <div><b>Временной интервал</b>: {{ t_start|date:'d.m.Y H:i:s' }} - {{ t_stop|date:'d.m.Y H:i:s' }}</div>
+        <div><b>Показаны только валидные</b>: {% if validate %}Да{% else %}Нет{% endif %}</div>
+    </div>
+</div>
+
+<div>{{ left_form }}</div>
+<div>{{ right_form }}</div>
+
+<form method="post" action="{% url 'plot_clicked' %}" class="plot-navigation-form">
+    {% csrf_token %}
+
+    {% for variable_id in selected_variable_ids %}
+        <input type="hidden" name="variables" value="{{ variable_id }}">
+    {% endfor %}
+
+    <input type="hidden" name="ts_start" value="{{ t_start|date:'Y-m-d H:i:s' }}">
+    <input type="hidden" name="ts_end" value="{{ t_stop|date:'Y-m-d H:i:s' }}">
+
+    {% if validate %}
+        <input type="hidden" name="validate" value="on">
+    {% endif %}
+
+    <div class="shift-buttons">
+        <button type="submit" name="shift" value="prev" class="shift-btn" title="Сдвинуть на 1 интервал назад">
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M10.75 4.75L5.5 10l5.25 5.25M6 10h8.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+            <span>100%</span>
+        </button>
+
+        <button type="submit" name="shift" value="prev_half" class="shift-btn" title="Сдвинуть на 1/2 интервала назад">
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M10.75 4.75L5.5 10l5.25 5.25M6 10h8.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+            <span>50%</span>
+        </button>
+
+        <button type="submit" name="shift" value="prev_quarter" class="shift-btn" title="Сдвинуть на 1/4 интервала назад">
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M10.75 4.75L5.5 10l5.25 5.25M6 10h8.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+            <span>25%</span>
+        </button>
+
+        <button type="submit" name="shift" value="next_quarter" class="shift-btn" title="Сдвинуть на 1/4 интервала вперед">
+            <span>25%</span>
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M9.25 4.75L14.5 10l-5.25 5.25M14 10H5.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+
+        <button type="submit" name="shift" value="next_half" class="shift-btn" title="Сдвинуть на 1/2 интервала вперед">
+            <span>50%</span>
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M9.25 4.75L14.5 10l-5.25 5.25M14 10H5.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+
+        <button type="submit" name="shift" value="next" class="shift-btn" title="Сдвинуть на 1 интервал вперед">
+            <span>100%</span>
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M9.25 4.75L14.5 10l-5.25 5.25M14 10H5.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+    </div>
+</form>
+
+<div>
+    {% for plot in plots %}
+
+    <div class="plot-wrapper">
+        <div class="plot-chart">
+            {% with figure=plot.figure %}
+                {% if figure %}
+                    {{ figure|safe }}
+                {% else %}
+                    <div class="no_data">Нет данных за выбранный период</div>
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="plot-info">
+            <div><b>Набор данных:</b>
+                <div><b>{{ plot.variable.dataset.tag }}</b> {{ plot.variable.dataset.logical_description }}</div>
+            </div>
+            <div><b>Переменная:</b>
+                <div><b>{{ plot.variable.name }}</b> {{ plot.variable.catdesc }}</div>
+            </div>
+            <div><b>Данные агрегированы</b>: {% if plot.aggregation %}Да{% else %}Нет{% endif %}</div>
+            {% if plot.bin_instance %}<div><b>Размер бина</b>: {{ plot.bin_instance.bin_td }} (HH:MM:SS) </div>{% endif %}
+        </div>
+    </div>
+
+    {% endfor %}
+</div>
+
+<form method="post" action="{% url 'plot_clicked' %}" class="plot-navigation-form">
+    {% csrf_token %}
+
+    {% for variable_id in selected_variable_ids %}
+        <input type="hidden" name="variables" value="{{ variable_id }}">
+    {% endfor %}
+
+    <input type="hidden" name="ts_start" value="{{ t_start|date:'Y-m-d H:i:s' }}">
+    <input type="hidden" name="ts_end" value="{{ t_stop|date:'Y-m-d H:i:s' }}">
+
+    {% if validate %}
+        <input type="hidden" name="validate" value="on">
+    {% endif %}
+
+    <div class="shift-buttons">
+        <button type="submit" name="shift" value="prev" class="shift-btn" title="Сдвинуть на 1 интервал назад">
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M10.75 4.75L5.5 10l5.25 5.25M6 10h8.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+            <span>100%</span>
+        </button>
+
+        <button type="submit" name="shift" value="prev_half" class="shift-btn" title="Сдвинуть на 1/2 интервала назад">
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M10.75 4.75L5.5 10l5.25 5.25M6 10h8.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+            <span>50%</span>
+        </button>
+
+        <button type="submit" name="shift" value="prev_quarter" class="shift-btn" title="Сдвинуть на 1/4 интервала назад">
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M10.75 4.75L5.5 10l5.25 5.25M6 10h8.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+            <span>25%</span>
+        </button>
+
+        <button type="submit" name="shift" value="next_quarter" class="shift-btn" title="Сдвинуть на 1/4 интервала вперед">
+            <span>25%</span>
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M9.25 4.75L14.5 10l-5.25 5.25M14 10H5.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+
+        <button type="submit" name="shift" value="next_half" class="shift-btn" title="Сдвинуть на 1/2 интервала вперед">
+            <span>50%</span>
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M9.25 4.75L14.5 10l-5.25 5.25M14 10H5.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+
+        <button type="submit" name="shift" value="next" class="shift-btn" title="Сдвинуть на 1 интервал вперед">
+            <span>100%</span>
+            <svg class="shift-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                    d="M9.25 4.75L14.5 10l-5.25 5.25M14 10H5.5"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+    </div>
+</form>

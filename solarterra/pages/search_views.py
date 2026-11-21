@@ -68,7 +68,7 @@ def select_variables(request):
         'plot_form': plot_form,
         'export_form': export_form,
         'selected_missions': selected_missions,
-        "has_errors": any([bool(var_form.errors), bool(plot_form.errors), bool(export_form.errors)]),
+        'has_errors': any([bool(var_form.errors), bool(plot_form.errors), bool(export_form.errors)]),
     }
 
     return render(request, "pages/variable_select.html", context)
@@ -97,84 +97,77 @@ def shift_interval(t_start, t_stop, direction):
 
     return t_start + shift, t_stop + shift
 
-
 def plot_clicked(request):
-    '''
-    Is called while the user is on the variable selection page and clicks "Plot". Expects POST with form data.
-    Opens the plot page with the generated plots in the new tab. If form data is invalid, re-render variable selection page with errors.
-    '''
     if request.method != "POST":
         return HttpResponse('Plot endpoint expects POST', status=405)
     
     selected_missions = request.session.get("selected_missions")
-    datasets = (
-        Dataset.objects.have_data()
-        .filter(mission__in=selected_missions)
-        .order_by("mission", "tag")
-    )
 
-    #reinstate forms with POST data
+    if not selected_missions:
+        return redirect("select_missions")
+    
     var_form = VariableSelectForm(request.POST, missions=selected_missions)
     plot_form = PlotForm(request.POST) 
+
+    if var_form.is_valid() and plot_form.is_valid():
+        context = {
+            'raw_post_data': request.POST.urlencode()
+        }
+        return render(request, "pages/plot_page.html", context)
+
+    datasets = Dataset.objects.have_data().filter(mission__in=selected_missions).order_by("mission", "tag")
     export_form = ExportForm(request.POST)
 
-    #go for plotting if forms are valid, otherwise re-render with errors
-    if var_form.is_valid() and plot_form.is_valid():
+    context = {
+        'datasets': datasets,
+        'var_form': var_form,
+        'plot_form': plot_form,
+        'export_form': export_form,
+        'selected_missions': selected_missions,
+        'has_errors': True,
+    }
 
-        #var_form data
+    return render(request, "pages/variable_select.html", context)
+
+def get_plot_data_api(request):
+    if request.method != "POST":
+        return HttpResponse("Plot api endpoint expects POST", status=405)
+
+    selected_missions = request.session.get("selected_missions")
+
+    if not selected_missions:
+        return HttpResponse("The session has expired. Please refresh the page and select the missions again", status=401)
+    
+    var_form = VariableSelectForm(request.POST, missions=selected_missions)
+    plot_form = PlotForm(request.POST)
+    
+    if var_form.is_valid() and plot_form.is_valid():
         var_instances = var_form.cleaned_data['variables']
         ts_start = var_form.cleaned_data['ts_start']
         ts_stop = var_form.cleaned_data['ts_end']
         validate = var_form.cleaned_data['validate']
 
-        #place to get plot parameters from plot_form if needed
-        #some_plot_param = plot_form.cleaned_data['some_plot_param']
-
         shift_direction = request.POST.get("shift")
         ts_start, ts_stop = shift_interval(ts_start, ts_stop, shift_direction)
 
-        #get plots
         t0 = time.time()
         plots = get_plots(var_instances, ts_start, ts_stop, validate)
-        t1 = time.time()
-        print(f"[PERF] get_plots: {t1-t0:.2f}s, plots: {len(plots)}")
+        print(f"[PERF] get_plots: {time.time()-t0:.2f}s, plots: {len(plots)}")
 
         for plot in plots:
-            logger.info(
-                f"[invalid_values] dataset={plot.variable.dataset.tag}, "
-                f"variable={plot.variable.name}, "
-                f"invalid_values={plot.invalid_values}"
-            )
+            logger.info(f"[invalid_values] dataset={plot.variable.dataset.tag}, variable={plot.variable.name}, invalid_values={plot.invalid_values}")
 
         context = {
-            't_start' : ts_start, #t_start is named like that bc is unrefactored yet in the template
-            't_stop' : ts_stop,
+            't_start': ts_start,
+            't_stop': ts_stop,
             'validate': validate,
-            'plots' : plots,
+            'plots': plots,
             'selected_variable_ids': list(var_instances.values_list("id", flat=True)),
         }
-        
-        t2 = time.time()
-        response = render(request, "pages/plot_page.html", context=context)
-        t3 = time.time()
-        print(f"[PERF] render: {t3-t2:.2f}s")
-        
-        return response
 
-    #forms aren't ok, re-render search page with errors
-    else:
-
-        context = {
-            'datasets': datasets,
-            'var_form': var_form,
-            'plot_form': plot_form,
-            'export_form': export_form,
-            'selected_missions': selected_missions,
-            "has_errors": any([bool(var_form.errors), bool(plot_form.errors), bool(export_form.errors)]),
-        }
-
-        return render(request, "pages/variable_select.html", context)
-
+        return render(request, "pages/plots_content.html", context)
+    
+    return HttpResponse("Form data validation error", status=400)
 
 def export_clicked(request):
     if request.method != "POST":
@@ -197,7 +190,7 @@ def export_clicked(request):
             'plot_form': plot_form,
             'export_form': export_form,
             'selected_missions': selected_missions,
-            "has_errors": any([bool(var_form.errors), bool(plot_form.errors), bool(export_form.errors)]),
+            'has_errors': True,
         }
 
         return render(request, "pages/variable_select.html", context)

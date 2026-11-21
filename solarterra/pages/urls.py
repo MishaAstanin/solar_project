@@ -15,6 +15,7 @@ urlpatterns = [
     path('missions', search_views.select_missions, name="select_missions"),
     path('variables', search_views.select_variables, name="select_variables"),
     path('plot', search_views.plot_clicked, name="plot_clicked"),
+    path('plot/data-api/', search_views.get_plot_data_api, name='get_plot_data_api'),
     path('export', search_views.export_clicked, name="export_clicked"), #is a placeholder for more complex logic, gets a file responce anyway 
     
     # technical data
