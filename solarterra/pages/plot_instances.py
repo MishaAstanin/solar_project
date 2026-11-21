@@ -389,6 +389,10 @@ class Plot():
         if arr is None or len(arr) == 0:
             return None
 
+        if not self.validate:
+            self.invalid_values.append("no validate")
+            return None
+
         condition = False
         
         if self.variable.validmin is not None:
@@ -481,6 +485,11 @@ class Plot():
     def get_sql_agg_y_arrays(self, query):
         for component_index in self.component_indexes:
             full_value_array = self._get_full_value_array(query, component_index)
+
+            if self.validate:
+                self.invalid_values.append("SQL Validated & Aggregated")
+            else:
+                self.invalid_values.append("SQL Aggregated (no validate)")
 
             if np.isnan(full_value_array).all():
                 self.y_arrays.append([])
@@ -624,8 +633,7 @@ class SpectrogramPlot():
             else:
                 self.invalid_values.append("SQL Aggregated (no validate)")
         else:
-            if self.validate:
-                self._apply_validation(z_matrix)
+            self._apply_validation(z_matrix)
 
             if self.aggregation:
                 bin_map = query.bin_map
@@ -710,36 +718,46 @@ class SpectrogramPlot():
 
         sample = z_matrix.flat[0]
         n_channels = z_matrix.shape[1]
+        invalid_mask = np.zeros(z_matrix.shape, dtype=bool)
+        has_bounds = False
 
         if self.variable.validmin is not None:
+            has_bounds = True
             vmin = self.variable.validmin
             if isinstance(vmin, list):
                 vmin_arr = np.array([
                     float(DataType.proper_type(v, sample) or -np.inf)
                     for v in vmin[:n_channels]
                 ], dtype=float)
-                z_matrix[z_matrix < vmin_arr] = np.nan
+                invalid_mask |= (z_matrix < vmin_arr)
             else:
                 vmin_val = DataType.proper_type(vmin, sample)
                 if vmin_val is not None:
-                    z_matrix[z_matrix < float(vmin_val)] = np.nan
+                    invalid_mask |= (z_matrix < float(vmin_val))
 
         if self.variable.validmax is not None:
+            has_bounds = True
             vmax = self.variable.validmax
             if isinstance(vmax, list):
                 vmax_arr = np.array([
                     float(DataType.proper_type(v, sample) or np.inf)
                     for v in vmax[:n_channels]
                 ], dtype=float)
-                z_matrix[z_matrix > vmax_arr] = np.nan
+                invalid_mask |= (z_matrix > vmax_arr)
             else:
                 vmax_val = DataType.proper_type(vmax, sample)
                 if vmax_val is not None:
-                    z_matrix[z_matrix > float(vmax_val)] = np.nan
+                    invalid_mask |= (z_matrix > float(vmax_val))
 
-        total = z_matrix.size
-        nan_count = int(np.isnan(z_matrix).sum())
-        self.invalid_values.append(f"{nan_count} / {total} invalid/missing")
+        if has_bounds:
+            z_matrix[invalid_mask] = np.nan
+            invalid_count = int(invalid_mask.sum())
+            total = z_matrix.size
+            self.invalid_values.append(
+                f"{invalid_count} / {total} [{self.variable.validmin}, {self.variable.validmax}]"
+            )
+        else:
+            self.invalid_values.append("no validmin/validmax")
 
     def get_figure(self):
         self.figure = spectrogram(self)
