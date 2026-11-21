@@ -259,9 +259,8 @@ class DBQuery():
                 params.append(float(vmax))
             except (ValueError, TypeError):
                 pass
-        if conditions:
-            return f'AVG(CASE WHEN {" AND ".join(conditions)} THEN {access} END)'
-        return f'AVG({access})'
+        
+        return f'AVG(CASE WHEN {" AND ".join(conditions)} THEN {access} END)'
 
 
 class Bin():
@@ -422,10 +421,7 @@ class Plot():
             condition = None
             self.invalid_values.append("no validmin/validmax")
         
-        if self.validate:
-            return condition
-        else:
-            return None
+        return condition
 
 
     def get_x_array(self, query):
@@ -659,13 +655,16 @@ class SpectrogramPlot():
 
         self._load_energy_axis(dataset, data_class)
 
+    def _set_default_y_axis(self):
+        if self.z_matrix is not None and self.z_matrix.ndim == 2 and self.z_matrix.shape[1] > 0:
+            self.y_axis = np.arange(self.z_matrix.shape[1], dtype=float)
+        else:
+            self.y_axis = np.array([0])
+        self.y_scaletyp = None
+
     def _load_energy_axis(self, dataset, data_class):
         if not self.variable.depend_1:
-            if self.z_matrix is not None and self.z_matrix.ndim == 2 and self.z_matrix.shape[1] > 0:
-                self.y_axis = np.arange(self.z_matrix.shape[1], dtype=float)
-            else:
-                self.y_axis = np.array([0])
-            self.y_scaletyp = None
+            self._set_default_y_axis()
             return
 
         try:
@@ -705,15 +704,14 @@ class SpectrogramPlot():
 
         except Exception as e:
             logger.warning(f"Failed to load energy axis for {self.variable.name}: {e}")
-            if self.z_matrix is not None and self.z_matrix.ndim == 2 and self.z_matrix.shape[1] > 0:
-                self.y_axis = np.arange(self.z_matrix.shape[1], dtype=float)
-            else:
-                self.y_axis = np.array([0])
-            self.y_scaletyp = None
+            self._set_default_y_axis()
 
     def _apply_validation(self, z_matrix):
-        if not self.validate or z_matrix is None or z_matrix.size == 0:
+        if not self.validate:
             self.invalid_values.append("no validate")
+            return
+        
+        if z_matrix is None or z_matrix.size == 0:
             return
 
         sample = z_matrix.flat[0]
