@@ -525,19 +525,19 @@ class Plot():
 
 class SpectrogramPlot():
 
-    def __init__(self, t_start, t_stop, variable, validate):
+    def __init__(self, t_start, t_stop, variable, x_field, validate):
         self.t_start = t_start
         self.t_stop = t_stop
         self.variable = variable
+        self.x_field = x_field
         self.validate = validate
 
         self.x_axis = None
-
         self.y_axis = None
         self.y_axis_label = None
         self.y_scaletyp = None
 
-        # z_matrix[i][j] value at time i for energy j
+        # z_matrix[i][j] value at time i for value j
         self.z_matrix = None
 
         self.aggregation = False
@@ -545,68 +545,121 @@ class SpectrogramPlot():
         self.figure = None
 
         self.bin_instance = None
-    
-    def load_data(self):
+        self.bin_starts_array = None
+        self.bin_centers_array = None
+
+        dynamic_field = variable.dynamic.filter(is_array_field=True).first()
+        if dynamic_field is None:
+            dynamic_field = variable.dynamic.first()
+        if dynamic_field is None:
+            raise ValueError(f"Dynamic field for spectrogram variable '{variable.name}' not found")
+        
+        self.y_db_field = dynamic_field.field_name
+
+    def prepare_bins(self, bin_instance):
+        i_start = tf(self.t_start)
+        i_stop = tf(self.t_stop)
+        self.bin_instance = bin_instance
+        self.bin_starts_array = np.arange(
+            i_start,
+            i_stop + (bin_instance.bin_seconds * 2),
+            step=bin_instance.bin_seconds
+        )
+        self.bin_centers_array = self.bin_starts_array + bin_instance.half_bin
+
+    def _extract_z_matrix(self, query):
+        if query.arrays is None or len(query.arrays) == 0:
+            return np.empty((0, 0), dtype=float)
+
+        try:
+            field_index = query.all_fields.index(self.y_db_field)
+            raw_column = query.arrays[field_index]
+        except (ValueError, IndexError):
+            return np.empty((0, 0), dtype=float)
+
+        if raw_column is None or len(raw_column) == 0:
+            return np.empty((0, 0), dtype=float)
+
+        n_channels = 0
+        for row in raw_column:
+            if row is not None and len(row) > 0:
+                n_channels = len(row)
+                break
+
+        if n_channels == 0:
+            return np.empty((len(raw_column), 0), dtype=float)
+
+        n_rows = len(raw_column)
+        matrix = np.full((n_rows, n_channels), np.nan, dtype=float)
+
+        for i, row in enumerate(raw_column):
+            if row is not None and len(row) == n_channels:
+                try:
+                    matrix[i, :] = [float(v) if v is not None else np.nan for v in row]
+                except (ValueError, TypeError):
+                    pass
+
+        return matrix
+
+    def set_arrays(self, query):
         dataset = self.variable.dataset
         data_class = dataset.dynamic.resolve_class()
 
-        if data_class is None:
-            return
-
-        # time field from depend_0
-        if not self.variable.depend_0:
-            return
-
-        try:
-            depend_0_var = dataset.variables.get(name=self.variable.depend_0)
-            filter_field = depend_0_var.dynamic.first().field_name
-        except Exception:
-            return
-
-        # spectrogram data field
-        data_field = self.variable.dynamic.filter(is_array_field=True).first()
-        if data_field is None:
-            return
-
-        i_start = tf(self.t_start)
-        i_stop = tf(self.t_stop)
-
-        qs = data_class.objects.filter(**{
-            f'{filter_field}__gte': i_start,
-            f'{filter_field}__lte': i_stop,
-            f'{data_field.field_name}__isnull': False,
-        }).order_by(filter_field).values_list(filter_field, data_field.field_name)
-
-        times = []
-        values = []
-        for t_val, arr_val in qs.iterator():
-            times.append(t_val)
-            values.append(arr_val)
-
-        if not times:
-            return
-
-        time_array = np.array(times)              # (N,)
-        z_matrix = np.array(values, dtype=float)  # (N, M)
-
-        self._apply_validation(z_matrix)
-
-        if len(time_array) > Bin.PPP:
-            self.bin_instance = Bin(self.t_start, self.t_stop)
-            time_array, z_matrix = self._aggregate(time_array, z_matrix)
-            self.aggregation = True
-
-        self.x_axis = np.array(list(map(ft, time_array)))
-        self.z_matrix = z_matrix
-
-        # energies from depend_1
-        if self.variable.depend_1:
-            self._load_energy_axis(dataset, data_class)
+        if self.aggregation:
+            self.x_axis = np.array(list(map(ft, self.bin_centers_array)))
         else:
-            self.y_axis = np.arange(z_matrix.shape[1], dtype=float)
-            self.y_scaletyp = None
-    
+            self.x_axis = np.array(list(map(ft, query.get_full_time_array())))
+
+        z_matrix = self._extract_z_matrix(query)
+
+        if z_matrix.size == 0:
+            self.z_matrix = z_matrix
+            self._load_energy_axis(dataset, data_class)
+            return
+
+        if query.sql_aggregated:
+            self.z_matrix = z_matrix
+            if self.validate:
+                self.invalid_values.append("SQL Validated & Aggregated")
+            else:
+                self.invalid_values.append("SQL Aggregated (no validate)")
+        else:
+            if self.validate:
+                self._apply_validation(z_matrix)
+
+            if self.aggregation:
+                bin_map = query.bin_map
+                if bin_map is None and self.bin_starts_array is not None:
+                    query.set_bin_map(self.bin_starts_array)
+                    bin_map = query.bin_map
+
+                n_bins = len(self.bin_centers_array)
+                n_channels = z_matrix.shape[1]
+                agg_z = np.full((n_bins, n_channels), np.nan, dtype=float)
+
+                if bin_map is not None:
+                    for bin_idx in np.unique(bin_map):
+                        if 0 <= bin_idx < n_bins:
+                            rows_in_bin = z_matrix[bin_map == bin_idx]
+                            if len(rows_in_bin) > 0:
+                                with np.errstate(invalid='ignore'):
+                                    agg_z[bin_idx] = np.nanmean(rows_in_bin, axis=0)
+
+                self.z_matrix = agg_z
+            else:
+                self.z_matrix = z_matrix
+
+        self._load_energy_axis(dataset, data_class)
+
     def _load_energy_axis(self, dataset, data_class):
+        if not self.variable.depend_1:
+            if self.z_matrix is not None and self.z_matrix.ndim == 2 and self.z_matrix.shape[1] > 0:
+                self.y_axis = np.arange(self.z_matrix.shape[1], dtype=float)
+            else:
+                self.y_axis = np.array([0])
+            self.y_scaletyp = None
+            return
+
         try:
             energy_var = dataset.variables.get(name=self.variable.depend_1)
 
@@ -614,7 +667,7 @@ class SpectrogramPlot():
                 nrv_entry = dataset.nrv_data.filter(variable=energy_var).first()
                 if nrv_entry is None or nrv_entry.value is None:
                     raise ValueError(f"NRV entry for '{energy_var.name}' not found")
-                
+
                 self.y_axis = np.array(nrv_entry.value, dtype=float)
                 try:
                     self.y_axis_label = energy_var.get_axis_label() or energy_var.name
@@ -622,9 +675,8 @@ class SpectrogramPlot():
                     self.y_axis_label = energy_var.name
                 self.y_scaletyp = getattr(energy_var, 'scaletyp', None)
                 return
-        
-            energy_field = energy_var.dynamic.filter(is_array_field=True).first()
 
+            energy_field = energy_var.dynamic.filter(is_array_field=True).first()
             if energy_field is None:
                 raise ValueError("Energy variable has no ArrayField")
 
@@ -643,8 +695,9 @@ class SpectrogramPlot():
             else:
                 raise ValueError("No energy data found")
 
-        except Exception:
-            if self.z_matrix is not None:
+        except Exception as e:
+            logger.warning(f"Failed to load energy axis for {self.variable.name}: {e}")
+            if self.z_matrix is not None and self.z_matrix.ndim == 2 and self.z_matrix.shape[1] > 0:
                 self.y_axis = np.arange(self.z_matrix.shape[1], dtype=float)
             else:
                 self.y_axis = np.array([0])
@@ -652,6 +705,7 @@ class SpectrogramPlot():
 
     def _apply_validation(self, z_matrix):
         if not self.validate or z_matrix is None or z_matrix.size == 0:
+            self.invalid_values.append("no validate")
             return
 
         sample = z_matrix.flat[0]
@@ -686,29 +740,6 @@ class SpectrogramPlot():
         total = z_matrix.size
         nan_count = int(np.isnan(z_matrix).sum())
         self.invalid_values.append(f"{nan_count} / {total} invalid/missing")
-
-    def _aggregate(self, time_array, z_matrix):
-        n = len(time_array)
-        bin_size = max(1, n // Bin.PPP)
-
-        starts = np.arange(0, n, bin_size)
-        
-        counts = np.diff(np.append(starts, n)).astype(float)
-
-        time_sums = np.add.reduceat(time_array.astype(float), starts)
-        agg_times = (time_sums / counts).astype(time_array.dtype)
-
-        z_nan_mask = np.isnan(z_matrix)
-        z_filled = np.where(z_nan_mask, 0.0, z_matrix)
-        z_valid_count = (~z_nan_mask).astype(float)
-
-        z_sums = np.add.reduceat(z_filled, starts, axis=0)
-        z_counts = np.add.reduceat(z_valid_count, starts, axis=0)
-
-        z_counts[z_counts == 0] = np.nan
-        agg_z = z_sums / z_counts
-
-        return agg_times, agg_z
 
     def get_figure(self):
         self.figure = spectrogram(self)

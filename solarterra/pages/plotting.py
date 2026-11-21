@@ -86,14 +86,68 @@ def get_plots(variables, t_start, t_end, validate):
             plots.append(plot)
     
     for var in spec_variables:
+        t_q = time.time()
+        if not var.depend_0:
+            logger.warning(f"No depend_0 specified for spectrogram var '{var.name}'! Skipping")
+            continue
+
+        filter_field = var.get_depend_field().field_name
+        data_field = var.dynamic.filter(is_array_field=True).first()
+        if data_field is None:
+            data_field = var.dynamic.first()
+
+        if data_field is None:
+            continue
+
+        field_name = data_field.field_name
+
+        query = DBQuery(
+            dataset=var.dataset,
+            filter_field=filter_field,
+            t_start=t_start,
+            t_stop=t_end,
+            fields=[field_name]
+        )
+
+        query.query()
+        row_count = query.queryset.count()
+        aggregation = row_count > Bin.PPP
+
         spec_plot = SpectrogramPlot(
             t_start=t_start,
             t_stop=t_end,
             variable=var,
+            x_field=filter_field,
             validate=validate
         )
-        spec_plot.load_data()
+
+        if row_count > 0:
+            if aggregation:
+                spec_plot.prepare_bins(bin_instance)
+                field_validators = {}
+                if validate:
+                    field_validators[field_name] = (var.validmin, var.validmax)
+
+                query.set_arrays_sql_aggregated(
+                    bin_instance.bin_seconds,
+                    tf(t_start),
+                    field_validators,
+                )
+
+                if not query.sql_aggregated:
+                    query.set_arrays()
+                    query.set_bin_map(spec_plot.bin_starts_array)
+
+                print(f"[PERF] DB query (SQL agg SPEC) {var.dataset.tag}: {time.time()-t_q:.2f}s, raw rows: {row_count}")
+            else:
+                query.set_arrays()
+                print(f"[PERF] DB query SPEC {var.dataset.tag}: {time.time()-t_q:.2f}s, rows: {row_count}")
+
+            spec_plot.aggregation = aggregation
+            spec_plot.set_arrays(query)
+
         spec_plot.get_figure()
+        print(f"[PERF] plot SPEC {var.name}: {time.time()-t_q:.2f}s")
         plots.append(spec_plot)
         
     plots.sort(key=lambda p: (
